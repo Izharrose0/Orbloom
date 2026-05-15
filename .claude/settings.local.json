@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tail -80 \"C:\\\\Users\\\\izhar\\\\AppData\\\\Local\\\\npm-cache\\\\_logs\\\\2026-05-15T18_38_11_776Z-debug-0.log\")",
+      "Read(//c/Users/izhar/AppData/Local/npm-cache/_logs/**)"
+    ]
+  }
+}
