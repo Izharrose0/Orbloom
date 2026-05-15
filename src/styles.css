@@ -79,3 +79,90 @@ canvas { display: block; touch-action: none; }
 }
 .ui-button:hover { background: rgba(20, 28, 60, 0.65); transform: scale(1.05); }
 .ui-button:active { transform: scale(0.95); }
+
+/* Welcome back toast */
+.welcome-back {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 22px 28px;
+  border-radius: 18px;
+  background: rgba(8, 12, 30, 0.62);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(140, 180, 255, 0.18);
+  color: #e6ecff;
+  text-align: center;
+  max-width: 320px;
+  pointer-events: none;
+  animation: welcome-back-in 0.7s ease-out, welcome-back-out 1.2s ease-in 4.2s forwards;
+}
+.welcome-back-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #7df3ff;
+  margin-bottom: 8px;
+}
+.welcome-back-body {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #cfd8ff;
+}
+@keyframes welcome-back-in {
+  from { opacity: 0; transform: translate(-50%, -42%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+@keyframes welcome-back-out {
+  to { opacity: 0; transform: translate(-50%, -58%); }
+}
+
+/* Stage transition */
+.stage-transition {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+.stage-transition-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(180, 220, 255, 0.55) 0%, rgba(0,0,0,0) 60%);
+  animation: stage-flash 1.4s ease-out forwards;
+}
+.stage-transition-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  animation: stage-label 3.2s ease-out forwards;
+}
+.stage-transition-eyebrow {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: #7df3ff;
+  margin-bottom: 12px;
+}
+.stage-transition-name {
+  display: block;
+  font-size: 36px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 24px rgba(125, 243, 255, 0.7);
+}
+@keyframes stage-flash {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes stage-label {
+  0% { opacity: 0; transform: translate(-50%, -45%) scale(0.92); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -55%) scale(1.02); }
+}

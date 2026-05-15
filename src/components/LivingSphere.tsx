@@ -11,14 +11,16 @@ export default function LivingSphere() {
 
   const uniforms = useMemo(
     () => ({
-      uTime:       { value: 0 },
-      uMass:       { value: 1 },
-      uPulse:      { value: 0 },
-      uEvolution:  { value: 0 },
-      uColorDeep:  { value: new THREE.Color('#070a1f') },
-      uColorMid:   { value: new THREE.Color('#1a2a6c') },
-      uColorGlow:  { value: new THREE.Color('#7df3ff') },
-      uColorVein:  { value: new THREE.Color('#b066ff') },
+      uTime:        { value: 0 },
+      uMass:        { value: 1 },
+      uPulse:       { value: 0 },
+      uEvolution:   { value: 0 },
+      uPulseRate:   { value: 1 },
+      uVeinDensity: { value: 1 },
+      uColorDeep:   { value: new THREE.Color('#070a1f') },
+      uColorMid:    { value: new THREE.Color('#1a2a6c') },
+      uColorGlow:   { value: new THREE.Color('#7df3ff') },
+      uColorVein:   { value: new THREE.Color('#b066ff') },
     }),
     []
   );
@@ -32,17 +34,36 @@ export default function LivingSphere() {
     []
   );
 
-  useFrame((_, delta) => {
-    const tick = useGameStore.getState().tick;
-    tick(delta);
+  // Reused scratch
+  const tmpDeep = useMemo(() => new THREE.Color(), []);
+  const tmpMid  = useMemo(() => new THREE.Color(), []);
+  const tmpGlow = useMemo(() => new THREE.Color(), []);
+  const tmpVein = useMemo(() => new THREE.Color(), []);
 
-    const { mass, pulseIntensity, evolution } = useGameStore.getState();
+  useFrame((state, delta) => {
+    const elapsed = state.clock.elapsedTime;
+    useGameStore.getState().tick(delta, elapsed);
+
+    const { mass, pulseIntensity, evolution, genome, stage } = useGameStore.getState();
+
+    // Apply genome + stage palette shift
+    const shift = stage.paletteShift;
+    tmpDeep.setHSL(((genome.hueDeep + shift) % 360) / 360, 0.7, 0.10);
+    tmpMid .setHSL(((genome.hueDeep + shift + 30) % 360) / 360, 0.65, 0.28);
+    tmpGlow.setHSL(((genome.hueGlow + shift) % 360) / 360, 0.85, 0.62);
+    tmpVein.setHSL(((genome.hueVein + shift) % 360) / 360, 0.9, 0.6);
 
     if (matRef.current) {
       uniforms.uTime.value += delta;
       uniforms.uMass.value = mass;
       uniforms.uPulse.value = pulseIntensity;
       uniforms.uEvolution.value = evolution;
+      uniforms.uPulseRate.value = genome.pulseRate;
+      uniforms.uVeinDensity.value = genome.veinDensity;
+      uniforms.uColorDeep.value.copy(tmpDeep);
+      uniforms.uColorMid.value.copy(tmpMid);
+      uniforms.uColorGlow.value.copy(tmpGlow);
+      uniforms.uColorVein.value.copy(tmpVein);
     }
 
     if (meshRef.current) {
@@ -58,6 +79,7 @@ export default function LivingSphere() {
     if (haloRef.current) {
       haloUniforms.uTime.value += delta;
       haloUniforms.uPulse.value = pulseIntensity;
+      haloUniforms.uColor.value.copy(tmpGlow);
       const s = (1 + Math.log2(1 + mass) * 0.18) * 1.55;
       haloRef.current.scale.set(s, s, s);
     }
@@ -75,7 +97,6 @@ export default function LivingSphere() {
         />
       </mesh>
 
-      {/* outer fresnel halo / atmosphere shell */}
       <mesh ref={haloRef}>
         <sphereGeometry args={[1, 48, 48]} />
         <shaderMaterial

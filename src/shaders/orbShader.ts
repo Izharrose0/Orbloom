@@ -5,6 +5,8 @@ uniform float uTime;
 uniform float uMass;
 uniform float uPulse;
 uniform float uEvolution;
+uniform float uPulseRate;
+uniform float uVeinDensity;
 
 varying vec3 vNormal;
 varying vec3 vWorldPos;
@@ -18,10 +20,10 @@ void main() {
   vec3 pos = position;
   vec3 n = normalize(position);
 
-  float t = uTime * 0.18;
+  float t = uTime * 0.18 * uPulseRate;
 
-  // Slow breathing
-  float breath = sin(uTime * 0.6) * 0.04 + cos(uTime * 0.27) * 0.02;
+  // Slow breathing — modulated by genome pulse rate
+  float breath = sin(uTime * 0.6 * uPulseRate) * 0.04 + cos(uTime * 0.27 * uPulseRate) * 0.02;
 
   // Layered organic noise for surface
   float noise1 = fbm(n * 1.4 + vec3(0.0, t, 0.0));
@@ -55,6 +57,8 @@ precision highp float;
 uniform float uTime;
 uniform float uPulse;
 uniform float uEvolution;
+uniform float uPulseRate;
+uniform float uVeinDensity;
 uniform vec3  uColorDeep;
 uniform vec3  uColorMid;
 uniform vec3  uColorGlow;
@@ -75,11 +79,11 @@ void main() {
   // Fresnel rim
   float fres = pow(1.0 - max(dot(N, V), 0.0), 2.6);
 
-  // Energy veins via fbm gradient
-  vec3 q = vLocalPos * 1.6 + vec3(0.0, uTime * 0.08, 0.0);
+  // Energy veins via fbm gradient — density driven by genome
+  vec3 q = vLocalPos * (1.4 + uVeinDensity * 0.6) + vec3(0.0, uTime * 0.08 * uPulseRate, 0.0);
   float veinNoise = fbm(q);
   float veinPattern = smoothstep(0.18, 0.0, abs(veinNoise - 0.05));
-  veinPattern *= 0.6 + 0.4 * sin(uTime * 1.4 + veinNoise * 6.0);
+  veinPattern *= 0.6 + 0.4 * sin(uTime * 1.4 * uPulseRate + veinNoise * 6.0);
 
   // Slow flowing surface energy
   float flow = fbm(vLocalPos * 2.4 + vec3(uTime * 0.12, -uTime * 0.09, uTime * 0.05));

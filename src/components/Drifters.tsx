@@ -1,10 +1,14 @@
-import { useMemo, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
 import { sfxCollect } from '../audio/audio';
 
-const MAX_DRIFTERS = 6;
+export type DriftersHandle = {
+  triggerMeteorShower: () => void;
+};
+
+const MAX_DRIFTERS = 16;
 const SPAWN_MIN = 5;
 const SPAWN_MAX = 12;
 
@@ -32,7 +36,7 @@ function spawn(d: Drifter) {
   d.alive = true;
 }
 
-export default function Drifters() {
+export default forwardRef<DriftersHandle, {}>(function Drifters(_, fwdRef) {
   const groupRef = useRef<THREE.Group>(null);
   const meshes = useRef<THREE.Mesh[]>([]);
 
@@ -52,15 +56,43 @@ export default function Drifters() {
 
   const nextSpawnRef = useRef<number>(2.5);
   const tRef = useRef(0);
+  const meteorBurstRemaining = useRef(0);
+  const meteorTimer = useRef(0);
+
+  useImperativeHandle(fwdRef, () => ({
+    triggerMeteorShower: () => {
+      meteorBurstRemaining.current = 14;
+      meteorTimer.current = 0;
+    },
+  }));
 
   useFrame((_, delta) => {
     tRef.current += delta;
 
-    // Spawn cadence
+    // Spawn cadence (slightly faster as evolution grows)
+    const evo = useGameStore.getState().evolution;
+    const cadenceMul = Math.max(0.45, 1 - evo * 0.05);
     if (tRef.current >= nextSpawnRef.current) {
       const slot = drifters.find((d) => !d.alive);
       if (slot) spawn(slot);
-      nextSpawnRef.current = tRef.current + SPAWN_MIN + Math.random() * (SPAWN_MAX - SPAWN_MIN);
+      nextSpawnRef.current =
+        tRef.current + (SPAWN_MIN + Math.random() * (SPAWN_MAX - SPAWN_MIN)) * cadenceMul;
+    }
+
+    // Meteor burst
+    if (meteorBurstRemaining.current > 0) {
+      meteorTimer.current -= delta;
+      if (meteorTimer.current <= 0) {
+        const slot = drifters.find((d) => !d.alive);
+        if (slot) {
+          spawn(slot);
+          // make meteors faster
+          slot.vel.multiplyScalar(2.4);
+          slot.size *= 0.7;
+        }
+        meteorBurstRemaining.current -= 1;
+        meteorTimer.current = 0.18 + Math.random() * 0.18;
+      }
     }
 
     drifters.forEach((d, i) => {
@@ -132,4 +164,4 @@ export default function Drifters() {
       ))}
     </group>
   );
-}
+});
