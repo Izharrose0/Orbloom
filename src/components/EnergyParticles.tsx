@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
+import { sfxTap, startAmbient } from '../audio/audio';
 
-const MAX_PARTICLES = 800;
+const MAX_PARTICLES = 1600;
 
 type Particle = {
   active: boolean;
@@ -39,58 +40,84 @@ export default function EnergyParticles() {
   const tmpVec = useMemo(() => new THREE.Vector3(), []);
 
   const burst = (worldPoint: THREE.Vector3) => {
+    const evo = useGameStore.getState().evolution;
+    const wantedCount = 30 + Math.floor(evo * 14) + Math.floor(Math.random() * 18);
     let spawned = 0;
-    const wantedCount = 28 + Math.floor(Math.random() * 12);
     for (let i = 0; i < particles.length && spawned < wantedCount; i++) {
       const p = particles[i];
       if (p.active) continue;
       p.active = true;
       const jitter = new THREE.Vector3(
-        (Math.random() - 0.5) * 0.4,
-        (Math.random() - 0.5) * 0.4,
-        (Math.random() - 0.5) * 0.4
+        (Math.random() - 0.5) * 0.6,
+        (Math.random() - 0.5) * 0.6,
+        (Math.random() - 0.5) * 0.6
       );
       p.pos.copy(worldPoint).add(jitter);
       p.vel
         .set(0, 0, 0)
         .subVectors(new THREE.Vector3(0, 0, 0), p.pos)
         .normalize()
-        .multiplyScalar(0.6 + Math.random() * 0.6)
+        .multiplyScalar(0.6 + Math.random() * 0.7)
         .add(
           new THREE.Vector3(
-            (Math.random() - 0.5) * 0.6,
-            (Math.random() - 0.5) * 0.6,
-            (Math.random() - 0.5) * 0.6
+            (Math.random() - 0.5) * 0.7,
+            (Math.random() - 0.5) * 0.7,
+            (Math.random() - 0.5) * 0.7
           )
         );
-      p.maxLife = 1.4 + Math.random() * 0.9;
+      p.maxLife = 1.3 + Math.random() * 1.1;
       p.life = p.maxLife;
-      p.size = 0.04 + Math.random() * 0.06;
+      p.size = 0.04 + Math.random() * 0.08 + evo * 0.012;
       spawned++;
     }
   };
 
-  // Pointer/tap handling at canvas level
-  const handleDown = (event: PointerEvent) => {
+  // Tap vs drag detection
+  const downStateRef = useRef<{ x: number; y: number; t: number; id: number } | null>(null);
+
+  const onPointerDown = (event: PointerEvent) => {
+    downStateRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      t: performance.now(),
+      id: event.pointerId,
+    };
+  };
+
+  const onPointerUp = (event: PointerEvent) => {
+    const d = downStateRef.current;
+    downStateRef.current = null;
+    if (!d || d.id !== event.pointerId) return;
+    const dx = event.clientX - d.x;
+    const dy = event.clientY - d.y;
+    const dist = Math.hypot(dx, dy);
+    const dt = performance.now() - d.t;
+    if (dist > 8 || dt > 400) return; // it was a drag/orbit, not a tap
+
     const x = (event.clientX / size.width) * 2 - 1;
     const y = -(event.clientY / size.height) * 2 + 1;
     raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-    // Plane through origin facing camera
     const planeNormal = camera.position.clone().normalize();
     tmpPlane.set(planeNormal, 0);
     raycaster.ray.intersectPlane(tmpPlane, tmpVec);
     if (!isFinite(tmpVec.x)) return;
-    // push outward a bit so particles fly inward toward orb
     tmpVec.normalize().multiplyScalar(3.5);
+
     burst(tmpVec);
     useGameStore.getState().absorbEnergy(1);
+    startAmbient();
+    sfxTap();
   };
 
-  // Attach native handler for full-canvas reactivity (incl. mobile touch)
   useEffect(() => {
     const dom = gl.domElement;
-    dom.addEventListener('pointerdown', handleDown);
-    return () => dom.removeEventListener('pointerdown', handleDown);
+    dom.addEventListener('pointerdown', onPointerDown);
+    dom.addEventListener('pointerup', onPointerUp);
+    dom.addEventListener('pointercancel', () => (downStateRef.current = null));
+    return () => {
+      dom.removeEventListener('pointerdown', onPointerDown);
+      dom.removeEventListener('pointerup', onPointerUp);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gl, size.width, size.height]);
 
@@ -106,29 +133,25 @@ export default function EnergyParticles() {
         writeIdx++;
         continue;
       }
-      // attraction toward origin (sphere center)
       const toCenter = p.pos.clone().multiplyScalar(-1);
       const dist = toCenter.length();
-      toCenter.normalize().multiplyScalar(2.4 + (3.0 / Math.max(0.4, dist)));
+      toCenter.normalize().multiplyScalar(2.4 + 3.0 / Math.max(0.4, dist));
       p.vel.addScaledVector(toCenter, delta);
       p.vel.multiplyScalar(0.985);
       p.pos.addScaledVector(p.vel, delta);
       p.life -= delta;
 
-      if (dist < 1.05 || p.life <= 0) {
-        p.active = false;
-      }
+      if (dist < 1.05 || p.life <= 0) p.active = false;
 
       const lifeRatio = Math.max(0, p.life / p.maxLife);
       positions[writeIdx * 3] = p.pos.x;
       positions[writeIdx * 3 + 1] = p.pos.y;
       positions[writeIdx * 3 + 2] = p.pos.z;
       sizes[writeIdx] = p.size * (0.4 + lifeRatio);
-      // color shifts cyan->purple as it nears center
       const t = 1 - Math.min(1, dist / 4);
-      colors[writeIdx * 3] = 0.5 + t * 0.4;       // r
-      colors[writeIdx * 3 + 1] = 0.9 - t * 0.4;   // g
-      colors[writeIdx * 3 + 2] = 1.0;             // b
+      colors[writeIdx * 3] = 0.5 + t * 0.4;
+      colors[writeIdx * 3 + 1] = 0.9 - t * 0.4;
+      colors[writeIdx * 3 + 2] = 1.0;
       writeIdx++;
     }
 

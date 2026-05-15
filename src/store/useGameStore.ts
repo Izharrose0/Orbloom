@@ -6,8 +6,12 @@ export type GameState = {
   evolution: number;
   pulseIntensity: number;
   lastTapAt: number;
+  drifterCollected: number;
+  muted: boolean;
 
   absorbEnergy: (amount?: number) => void;
+  collectDrifter: (value?: number) => void;
+  setMuted: (m: boolean) => void;
   tick: (delta: number) => void;
 };
 
@@ -17,15 +21,29 @@ export const useGameStore = create<GameState>((set, get) => ({
   evolution: 0,
   pulseIntensity: 0,
   lastTapAt: -10,
+  drifterCollected: 0,
+  muted: false,
 
   absorbEnergy: (amount = 1) => {
     const now = performance.now() / 1000;
     set((s) => ({
       energy: s.energy + amount,
-      pulseIntensity: Math.min(1.6, s.pulseIntensity + 0.55),
+      pulseIntensity: Math.min(1.8, s.pulseIntensity + 0.55),
       lastTapAt: now,
     }));
   },
+
+  collectDrifter: (value = 8) => {
+    set((s) => ({
+      energy: s.energy + value,
+      mass: s.mass + value * 0.12,
+      pulseIntensity: Math.min(2.2, s.pulseIntensity + 1.1),
+      drifterCollected: s.drifterCollected + 1,
+      lastTapAt: performance.now() / 1000,
+    }));
+  },
+
+  setMuted: (m) => set({ muted: m }),
 
   tick: (delta) => {
     const s = get();
