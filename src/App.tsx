@@ -1,9 +1,16 @@
 import { Canvas } from '@react-three/fiber';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import MainScene from './scenes/MainScene';
 import UIOverlay from './components/UIOverlay';
+import { loadPlanet, startAutoSave } from './lib/persistence';
 
 export default function App() {
+  useEffect(() => {
+    loadPlanet();
+    const stop = startAutoSave();
+    return stop;
+  }, []);
+
   return (
     <>
       <Canvas
