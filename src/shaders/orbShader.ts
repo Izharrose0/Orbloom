@@ -108,8 +108,9 @@ void main() {
   vec3 rim = uColorGlow * fres * (1.1 + uPulse * 0.8 + uEvolution * 0.05);
   vec3 color = base + rim;
 
-  // Subtle inner emissive lift with evolution
-  color += uColorVein * 0.04 * uEvolution;
+  // Subtle inner emissive lift with evolution — saturating
+  float evoLift = 1.0 - exp(-uEvolution * 0.18); // 0→1 asintotico
+  color += uColorVein * 0.18 * evoLift;
 
   // Tonemap-ish soft clamp
   color = color / (1.0 + color * 0.35);

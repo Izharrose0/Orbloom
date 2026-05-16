@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { orbVertexShader, orbFragmentShader } from '../shaders/orbShader';
 import { useGameStore } from '../store/useGameStore';
+import { visualScaleForMass } from '../lib/scale';
 
 export default function LivingSphere() {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -66,10 +67,11 @@ export default function LivingSphere() {
       uniforms.uColorVein.value.copy(tmpVein);
     }
 
+    const visScale = visualScaleForMass(mass);
+
     if (meshRef.current) {
-      const target = 1 + Math.log2(1 + mass) * 0.18;
       meshRef.current.scale.lerp(
-        new THREE.Vector3(target, target, target),
+        new THREE.Vector3(visScale, visScale, visScale),
         Math.min(1, delta * 1.5)
       );
       meshRef.current.rotation.y += delta * 0.04;
@@ -78,9 +80,9 @@ export default function LivingSphere() {
 
     if (haloRef.current) {
       haloUniforms.uTime.value += delta;
-      haloUniforms.uPulse.value = pulseIntensity;
+      haloUniforms.uPulse.value = Math.min(0.9, pulseIntensity); // cap halo pulse to avoid white-out
       haloUniforms.uColor.value.copy(tmpGlow);
-      const s = (1 + Math.log2(1 + mass) * 0.18) * 1.55;
+      const s = visScale * 1.4;
       haloRef.current.scale.set(s, s, s);
     }
   });
@@ -122,9 +124,10 @@ export default function LivingSphere() {
             varying vec3 vNormal;
             varying vec3 vView;
             void main() {
-              float f = pow(1.0 - max(dot(normalize(vNormal), normalize(vView)), 0.0), 3.0);
-              float a = f * (0.55 + uPulse * 0.6 + 0.08 * sin(uTime * 0.7));
-              gl_FragColor = vec4(uColor * (0.7 + uPulse), a);
+              float f = pow(1.0 - max(dot(normalize(vNormal), normalize(vView)), 0.0), 3.2);
+              // Tamed halo: lower base, gentler pulse contribution.
+              float a = f * (0.32 + uPulse * 0.28 + 0.05 * sin(uTime * 0.7));
+              gl_FragColor = vec4(uColor * (0.7 + uPulse * 0.4), a);
             }
           `}
         />

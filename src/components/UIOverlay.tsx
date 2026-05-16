@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { setMuted as setAudioMuted, startAmbient } from '../audio/audio';
-
-function formatAway(seconds: number): string {
-  if (seconds < 60) return `${Math.floor(seconds)}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
-  return `${Math.floor(seconds / 86400)}g`;
-}
+import { formatBig, formatDecimal } from '../lib/format';
 
 export default function UIOverlay() {
   const [, force] = useState(0);
@@ -45,11 +39,11 @@ export default function UIOverlay() {
         <span style={{ opacity: 0.4 }}>·</span>
         <span>{stage.name}</span>
         <span style={{ opacity: 0.4 }}>·</span>
-        <span>m {mass.toFixed(1)}</span>
+        <span>m {formatBig(mass)}</span>
         <span style={{ opacity: 0.4 }}>·</span>
-        <span>e {evolution.toFixed(2)}</span>
+        <span>e {formatDecimal(evolution)}</span>
         <span style={{ opacity: 0.4 }}>·</span>
-        <span>★ {drifterCollected}</span>
+        <span>★ {formatBig(drifterCollected, 0)}</span>
       </div>
 
       <button className="ui-button" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
@@ -60,13 +54,13 @@ export default function UIOverlay() {
         <div className="welcome-back">
           <div className="welcome-back-eyebrow">Bentornato</div>
           <div className="welcome-back-body">
-            Mentre eri via il tuo pianeta è cresciuto di <strong>+{welcomeBackAmount.toFixed(2)}</strong> massa
+            Mentre eri via il tuo pianeta è cresciuto di <strong>+{formatBig(welcomeBackAmount)}</strong> massa
           </div>
         </div>
       )}
 
       <div className="ui-hint">
-        Tap · feed &nbsp;·&nbsp; Drag · orbit &nbsp;·&nbsp; Pinch / wheel · zoom &nbsp;·&nbsp; Double-tap · close-up
+        Tap · feed &nbsp;·&nbsp; Drag · orbit &nbsp;·&nbsp; Pinch / wheel · zoom
       </div>
     </div>
   );

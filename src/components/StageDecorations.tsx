@@ -2,9 +2,24 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
+import { visualScaleForMass } from '../lib/scale';
 
 const RING_COUNT = 220;
 const TENDRIL_COUNT = 6;
+
+function makeTendrilCurve(seed: number) {
+  const pts: THREE.Vector3[] = [];
+  const baseAngle = (seed / TENDRIL_COUNT) * Math.PI * 2;
+  const segments = 8;
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const r = 1.0 + t * 2.2;
+    const twist = baseAngle + t * 1.4 + Math.sin(seed * 1.7) * 0.4;
+    const y = Math.sin(t * Math.PI * 1.3 + seed) * 0.6 * t;
+    pts.push(new THREE.Vector3(Math.cos(twist) * r, y, Math.sin(twist) * r));
+  }
+  return new THREE.CatmullRomCurve3(pts);
+}
 
 export default function StageDecorations() {
   const ringRef = useRef<THREE.Points>(null);
@@ -58,7 +73,7 @@ export default function StageDecorations() {
     const elapsed = state.clock.elapsedTime;
     const { stage, pulseIntensity, mass, genome } = useGameStore.getState();
 
-    const sphereScale = 1 + Math.log2(1 + mass) * 0.18;
+    const sphereScale = visualScaleForMass(mass);
 
     const glow = new THREE.Color().setHSL((genome.hueGlow + stage.paletteShift) / 360, 0.85, 0.65);
     const warm = new THREE.Color().setHSL(((genome.hueGlow + stage.paletteShift + 25) % 360) / 360, 0.9, 0.62);
@@ -80,7 +95,7 @@ export default function StageDecorations() {
         coronaUniforms.uTime.value = elapsed;
         coronaUniforms.uPulse.value = pulseIntensity;
         coronaUniforms.uColor.value.copy(warm);
-        const s = sphereScale * (1.85 + 0.04 * Math.sin(elapsed * 0.7));
+        const s = sphereScale * (1.55 + 0.04 * Math.sin(elapsed * 0.7));
         coronaRef.current.scale.set(s, s, s);
         coronaRef.current.rotation.y += delta * 0.04;
       }
@@ -91,9 +106,12 @@ export default function StageDecorations() {
       if (stage.tendrilsEnabled) {
         tendrilsRef.current.scale.setScalar(sphereScale);
         tendrilsRef.current.rotation.y += delta * 0.18;
+        // Subtle breathing rotation on X for a "tentacle drift" feel
+        tendrilsRef.current.rotation.x = Math.sin(elapsed * 0.3) * 0.08;
         tendrilsRef.current.children.forEach((child, i) => {
-          const tw = 1 + 0.3 * Math.sin(elapsed * 0.6 + i);
-          child.scale.set(tw, 1, tw);
+          const m = child as THREE.Mesh;
+          const mat = m.material as THREE.MeshBasicMaterial;
+          if (mat) mat.opacity = 0.32 + 0.18 * Math.sin(elapsed * 0.7 + i);
         });
       }
     }
@@ -103,7 +121,7 @@ export default function StageDecorations() {
       if (stage.discEnabled) {
         discUniforms.uTime.value = elapsed;
         discUniforms.uColor.value.copy(glow);
-        const s = sphereScale * 4.2;
+        const s = sphereScale * 2.8;
         discRef.current.scale.set(s, s, 1);
         discRef.current.rotation.z += delta * 0.25;
       }
@@ -172,21 +190,17 @@ export default function StageDecorations() {
         />
       </mesh>
 
-      {/* Distortion tendrils (Buco bianco+) */}
+      {/* Distortion tendrils (Buco bianco+) — curved tubes that twist out of the orb */}
       <group ref={tendrilsRef} visible={false}>
         {Array.from({ length: TENDRIL_COUNT }).map((_, i) => {
-          const angle = (i / TENDRIL_COUNT) * Math.PI * 2;
+          const curve = makeTendrilCurve(i);
           return (
-            <mesh
-              key={i}
-              position={[Math.cos(angle) * 1.6, 0, Math.sin(angle) * 1.6]}
-              rotation={[0, angle, Math.PI * 0.5]}
-            >
-              <coneGeometry args={[0.05, 1.2, 8, 1, true]} />
+            <mesh key={i}>
+              <tubeGeometry args={[curve, 40, 0.04, 6, false]} />
               <meshBasicMaterial
                 color="#cfa8ff"
                 transparent
-                opacity={0.55}
+                opacity={0.45}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
               />

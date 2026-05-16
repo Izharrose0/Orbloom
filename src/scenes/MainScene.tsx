@@ -12,25 +12,31 @@ import Constellation from '../components/Constellation';
 import CosmicEventsSystem from '../systems/cosmicEvents';
 import { useGameStore } from '../store/useGameStore';
 
+const BLOOM_MIN = 0.6;
+const BLOOM_MAX = 1.9;
+
 function DynamicBloom() {
   const bloomRef = useRef<any>(null);
-  useFrame(() => {
+  const currentRef = useRef(0.9);
+  useFrame((_, delta) => {
     const { stage, pulseIntensity, activeEvent } = useGameStore.getState();
-    if (bloomRef.current) {
-      const base = 1.0 + stage.bloomBoost;
-      const pulse = pulseIntensity * 0.6;
-      const eventBoost = activeEvent === 'resonance' ? 0.4 : 0;
-      bloomRef.current.intensity = base + pulse + eventBoost;
-    }
+    if (!bloomRef.current) return;
+    const stageBoost = Math.min(0.6, stage.bloomBoost * 0.5); // damp the per-stage growth
+    const pulse = Math.min(0.55, pulseIntensity * 0.35);
+    const eventBoost = activeEvent === 'resonance' ? 0.25 : activeEvent === 'eclipse' ? -0.35 : 0;
+    const target = Math.max(BLOOM_MIN, Math.min(BLOOM_MAX, 0.85 + stageBoost + pulse + eventBoost));
+    // temporal smoothing → no abrupt flashes
+    currentRef.current += (target - currentRef.current) * Math.min(1, delta * 2.5);
+    bloomRef.current.intensity = currentRef.current;
   });
   return (
     <Bloom
       ref={bloomRef}
-      intensity={1.2}
-      luminanceThreshold={0.18}
-      luminanceSmoothing={0.6}
+      intensity={0.9}
+      luminanceThreshold={0.28}
+      luminanceSmoothing={0.7}
       mipmapBlur
-      radius={0.85}
+      radius={0.78}
     />
   );
 }
