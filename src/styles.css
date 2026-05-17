@@ -306,3 +306,48 @@ canvas { display: block; touch-action: none; }
 @keyframes trait-toast-out {
   to { opacity: 0; transform: translate(-50%, -58%); }
 }
+
+/* Debug panel layout: left = composites, right = scalars, top-right = main (leva default) */
+.debug-left  { position: fixed; left: 12px; top: 70px;  z-index: 999; pointer-events: auto; }
+.debug-right { position: fixed; right: 12px; top: 70px; z-index: 999; pointer-events: auto; }
+
+/* Error screen */
+.error-screen {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at center, #07091a 0%, #000 100%);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+  color: #cfd8ff;
+}
+.error-card {
+  max-width: 480px;
+  padding: 32px;
+  border-radius: 18px;
+  background: rgba(8, 12, 30, 0.7);
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  backdrop-filter: blur(20px);
+  text-align: center;
+}
+.error-eyebrow {
+  font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+  color: #ff7d7d; margin-bottom: 10px;
+}
+.error-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+.error-detail {
+  font-size: 12px; text-align: left;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 12px; border-radius: 8px;
+  max-height: 200px; overflow: auto;
+  color: #aab8e0;
+}
+.error-reload {
+  margin-top: 16px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: #7df3ff;
+  color: #02030a;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border: none; cursor: pointer;
+}

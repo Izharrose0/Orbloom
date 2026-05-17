@@ -5,7 +5,10 @@ import { orbVertexShader, orbFragmentShader } from '../shaders/orbShader';
 import { useGameStore } from '../store/useGameStore';
 import { visualScaleForMass } from '../lib/scale';
 import { NEBULA_A, NEBULA_B } from '../lib/skyPalette';
-import { hasTrait } from '../lib/traits';
+function amt(traits: string[], amounts: Record<string, number>, id: string): number {
+  if (amounts[id] !== undefined) return amounts[id];
+  return traits.includes(id) ? 1 : 0;
+}
 
 const COLOR_CAST_SINGED = new THREE.Color(1.35, 0.7, 0.45);
 const COLOR_CAST_FROZEN = new THREE.Color(0.55, 0.9, 1.25);
@@ -13,7 +16,6 @@ const COLOR_CAST_FROZEN = new THREE.Color(0.55, 0.9, 1.25);
 export default function LivingSphere() {
   const meshRef = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.ShaderMaterial>(null);
-  const haloRef = useRef<THREE.Mesh>(null);
 
   const uniforms = useMemo(
     () => ({
@@ -49,15 +51,6 @@ export default function LivingSphere() {
     []
   );
 
-  const haloUniforms = useMemo(
-    () => ({
-      uTime:  { value: 0 },
-      uPulse: { value: 0 },
-      uColor: { value: new THREE.Color('#7df3ff') },
-    }),
-    []
-  );
-
   const tmpDeep = useMemo(() => new THREE.Color(), []);
   const tmpMid  = useMemo(() => new THREE.Color(), []);
   const tmpGlow = useMemo(() => new THREE.Color(), []);
@@ -68,7 +61,7 @@ export default function LivingSphere() {
     useGameStore.getState().tick(delta, elapsed);
 
     const s = useGameStore.getState();
-    const { mass, pulseIntensity, evolution, genome, stage, traits } = s;
+    const { mass, pulseIntensity, evolution, genome, stage, traits, traitAmounts } = s;
 
     const shift = stage.paletteShift;
     tmpDeep.setHSL(((genome.hueDeep + shift) % 360) / 360, 0.7, 0.10);
@@ -76,10 +69,10 @@ export default function LivingSphere() {
     tmpGlow.setHSL(((genome.hueGlow + shift) % 360) / 360, 0.85, 0.62);
     tmpVein.setHSL(((genome.hueVein + shift) % 360) / 360, 0.9, 0.6);
 
-    // Pulse rate trait modifiers
-    let pulseRateMul = 1;
-    if (hasTrait(traits, 'pulsar')) pulseRateMul *= 2.0;
-    if (hasTrait(traits, 'quiet'))  pulseRateMul *= 0.5;
+    // Pulse rate trait modifiers (continuous)
+    const pulsarA = amt(traits, traitAmounts, 'pulsar');
+    const quietA  = amt(traits, traitAmounts, 'quiet');
+    const pulseRateMul = (1 + pulsarA * 1.0) * (1 - quietA * 0.5);
 
     if (matRef.current) {
       uniforms.uTime.value += delta;
@@ -94,24 +87,31 @@ export default function LivingSphere() {
       uniforms.uColorGlow.value.copy(tmpGlow);
       uniforms.uColorVein.value.copy(tmpVein);
 
-      // Wire traits (binary 0/1 for now — could be eased later)
-      uniforms.uTraitSmooth.value   = hasTrait(traits, 'smooth')   ? 1 : 0;
-      uniforms.uTraitSpiked.value   = hasTrait(traits, 'spiked')   ? 1 : 0;
-      uniforms.uTraitRidged.value   = hasTrait(traits, 'ridged')   ? 1 : 0;
-      uniforms.uTraitFissured.value = hasTrait(traits, 'fissured') ? 1 : 0;
-      uniforms.uTraitCratered.value = hasTrait(traits, 'cratered') ? 1 : 0;
-      uniforms.uTraitOblate.value   = hasTrait(traits, 'oblate')   ? 1 : 0;
-      uniforms.uTraitProlate.value  = hasTrait(traits, 'prolate')  ? 1 : 0;
-      uniforms.uTraitTwisted.value  = hasTrait(traits, 'twisted')  ? 1 : 0;
-      uniforms.uTraitAurorae.value  = hasTrait(traits, 'aurorae')  ? 1 : 0;
-      uniforms.uTraitEclipsed.value = hasTrait(traits, 'eclipsed') ? 1 : 0;
+      // Wire traits as CONTINUOUS amounts (composites can use any in-between value)
+      uniforms.uTraitSmooth.value   = amt(traits, traitAmounts, 'smooth');
+      uniforms.uTraitSpiked.value   = amt(traits, traitAmounts, 'spiked');
+      uniforms.uTraitRidged.value   = amt(traits, traitAmounts, 'ridged');
+      uniforms.uTraitFissured.value = amt(traits, traitAmounts, 'fissured');
+      uniforms.uTraitCratered.value = amt(traits, traitAmounts, 'cratered');
+      uniforms.uTraitOblate.value   = amt(traits, traitAmounts, 'oblate');
+      uniforms.uTraitProlate.value  = amt(traits, traitAmounts, 'prolate');
+      uniforms.uTraitTwisted.value  = amt(traits, traitAmounts, 'twisted');
+      uniforms.uTraitAurorae.value  = amt(traits, traitAmounts, 'aurorae');
+      uniforms.uTraitEclipsed.value = amt(traits, traitAmounts, 'eclipsed');
 
-      if (hasTrait(traits, 'singed')) {
-        uniforms.uColorCast.value.copy(COLOR_CAST_SINGED);
-        uniforms.uColorCastStrength.value = 1;
-      } else if (hasTrait(traits, 'frozen')) {
-        uniforms.uColorCast.value.copy(COLOR_CAST_FROZEN);
-        uniforms.uColorCastStrength.value = 1;
+      // Color cast can BLEND between singed and frozen
+      const singedA = amt(traits, traitAmounts, 'singed');
+      const frozenA = amt(traits, traitAmounts, 'frozen');
+      const colorStrength = Math.max(singedA, frozenA);
+      if (colorStrength > 0) {
+        uniforms.uColorCast.value.copy(COLOR_CAST_SINGED).multiplyScalar(singedA).add(
+          new THREE.Color().copy(COLOR_CAST_FROZEN).multiplyScalar(frozenA)
+        );
+        // Normalize if both present
+        if (singedA + frozenA > 0) {
+          uniforms.uColorCast.value.multiplyScalar(1 / (singedA + frozenA));
+        }
+        uniforms.uColorCastStrength.value = colorStrength;
       } else {
         uniforms.uColorCastStrength.value = 0;
       }
@@ -128,59 +128,17 @@ export default function LivingSphere() {
       meshRef.current.rotation.x += delta * 0.012;
     }
 
-    if (haloRef.current) {
-      haloUniforms.uTime.value += delta;
-      haloUniforms.uPulse.value = Math.min(0.9, pulseIntensity);
-      haloUniforms.uColor.value.copy(tmpGlow);
-      const sf = visScale * 1.4;
-      haloRef.current.scale.set(sf, sf, sf);
-    }
   });
 
   return (
-    <group>
-      <mesh ref={meshRef}>
-        <icosahedronGeometry args={[1, 64]} />
-        <shaderMaterial
-          ref={matRef}
-          uniforms={uniforms}
-          vertexShader={orbVertexShader}
-          fragmentShader={orbFragmentShader}
-        />
-      </mesh>
-
-      <mesh ref={haloRef}>
-        <sphereGeometry args={[1, 48, 48]} />
-        <shaderMaterial
-          transparent
-          depthWrite={false}
-          side={THREE.BackSide}
-          blending={THREE.AdditiveBlending}
-          uniforms={haloUniforms}
-          vertexShader={/* glsl */ `
-            varying vec3 vNormal;
-            varying vec3 vView;
-            void main() {
-              vNormal = normalize(mat3(modelMatrix) * normal);
-              vec4 wp = modelMatrix * vec4(position, 1.0);
-              vView = normalize(cameraPosition - wp.xyz);
-              gl_Position = projectionMatrix * viewMatrix * wp;
-            }
-          `}
-          fragmentShader={/* glsl */ `
-            uniform float uTime;
-            uniform float uPulse;
-            uniform vec3  uColor;
-            varying vec3 vNormal;
-            varying vec3 vView;
-            void main() {
-              float f = pow(1.0 - max(dot(normalize(vNormal), normalize(vView)), 0.0), 3.2);
-              float a = f * (0.32 + uPulse * 0.28 + 0.05 * sin(uTime * 0.7));
-              gl_FragColor = vec4(uColor * (0.7 + uPulse * 0.4), a);
-            }
-          `}
-        />
-      </mesh>
-    </group>
+    <mesh ref={meshRef}>
+      <icosahedronGeometry args={[1, 64]} />
+      <shaderMaterial
+        ref={matRef}
+        uniforms={uniforms}
+        vertexShader={orbVertexShader}
+        fragmentShader={orbFragmentShader}
+      />
+    </mesh>
   );
 }

@@ -36,7 +36,8 @@ export type GameState = {
 
   // Traits
   traits: string[];
-  recentTraitId: string | null;     // for toast
+  traitAmounts: Record<string, number>; // continuous 0..1 per trait id (overrides binary if set)
+  recentTraitId: string | null;
   recentTraitShownAt: number;
 
   // UI
@@ -44,7 +45,7 @@ export type GameState = {
 
   // Actions
   init: (userId: string) => void;
-  hydrateFromRemote: (data: { mass: number; energy: number; evolution: number; updatedAt?: string | null; peakMass?: number; totalTaps?: number; drifterCollected?: number; traits?: string[] }) => void;
+  hydrateFromRemote: (data: { mass: number; energy: number; evolution: number; updatedAt?: string | null; peakMass?: number; totalTaps?: number; drifterCollected?: number; traits?: string[]; traitAmounts?: Record<string, number> }) => void;
   absorbEnergy: (amount?: number) => void;
   collectDrifter: (value?: number) => void;
   setMuted: (m: boolean) => void;
@@ -52,6 +53,9 @@ export type GameState = {
   clearEvent: () => void;
   consumeWelcomeBack: () => void;
   grantTrait: (traitId: string) => void;
+  setTraitAmount: (traitId: string, amount: number) => void;
+  applyComposite: (recipe: Record<string, number>, replaceAll?: boolean) => void;
+  clearAllTraits: () => void;
   consumeRecentTrait: () => void;
   tick: (delta: number, elapsed: number) => void;
 };
@@ -85,6 +89,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   welcomeBackShownAt: 0,
 
   traits: [],
+  traitAmounts: {},
   recentTraitId: null,
   recentTraitShownAt: 0,
 
@@ -110,16 +115,49 @@ export const useGameStore = create<GameState>((set, get) => ({
       drifterCollected: data.drifterCollected ?? 0,
       stage,
       traits: data.traits ?? [],
+      traitAmounts: data.traitAmounts ?? {},
     });
   },
 
   grantTrait: (traitId) => {
     set((s) => ({
       traits: applyTrait(s.traits, traitId),
+      traitAmounts: { ...s.traitAmounts, [traitId]: 1 },
       recentTraitId: traitId,
       recentTraitShownAt: performance.now() / 1000,
     }));
   },
+
+  setTraitAmount: (traitId, amount) => {
+    set((s) => {
+      const clamped = Math.max(0, Math.min(1, amount));
+      const traits = clamped > 0 && !s.traits.includes(traitId)
+        ? applyTrait(s.traits, traitId)
+        : clamped <= 0
+          ? s.traits.filter((t) => t !== traitId)
+          : s.traits;
+      return {
+        traits,
+        traitAmounts: { ...s.traitAmounts, [traitId]: clamped },
+      };
+    });
+  },
+
+  applyComposite: (recipe, replaceAll = true) => {
+    set((s) => {
+      let traits = replaceAll ? [] : [...s.traits];
+      let amounts = replaceAll ? {} : { ...s.traitAmounts };
+      for (const [id, amt] of Object.entries(recipe)) {
+        if (amt > 0) {
+          traits = applyTrait(traits, id);
+          amounts[id] = Math.max(0, Math.min(1, amt));
+        }
+      }
+      return { traits, traitAmounts: amounts };
+    });
+  },
+
+  clearAllTraits: () => set({ traits: [], traitAmounts: {}, recentTraitId: null }),
 
   consumeRecentTrait: () => set({ recentTraitId: null }),
 

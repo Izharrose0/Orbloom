@@ -2,8 +2,12 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
-import { hasTrait } from '../lib/traits';
 import { visualScaleForMass } from '../lib/scale';
+
+function amt(traits: string[], amounts: Record<string, number>, id: string): number {
+  if (amounts[id] !== undefined) return amounts[id];
+  return traits.includes(id) ? 1 : 0;
+}
 
 const GEM_COUNT = 4;
 
@@ -30,17 +34,17 @@ export default function TraitDecorations() {
 
   useFrame((state, delta) => {
     const elapsed = state.clock.elapsedTime;
-    const { traits, mass, genome } = useGameStore.getState();
+    const { traits, traitAmounts, mass, genome } = useGameStore.getState();
     const visScale = visualScaleForMass(mass);
 
-    const ringActive = hasTrait(traits, 'haloRing');
-    const gemActive  = hasTrait(traits, 'gemmed');
-    const twinActive = hasTrait(traits, 'twinned');
+    const ringA = amt(traits, traitAmounts, 'haloRing');
+    const gemA  = amt(traits, traitAmounts, 'gemmed');
+    const twinA = amt(traits, traitAmounts, 'twinned');
 
-    // Halo ring (thin equatorial)
+    // Halo ring (thin equatorial) — opacity scales with amount
     if (haloRingRef.current) {
-      haloRingRef.current.visible = ringActive;
-      if (ringActive) {
+      haloRingRef.current.visible = ringA > 0.01;
+      if (ringA > 0.01) {
         const s = visScale * 1.65;
         haloRingRef.current.scale.set(s, s, s);
         haloRingRef.current.rotation.z = Math.PI / 2 + Math.sin(elapsed * 0.15) * 0.05;
@@ -54,10 +58,10 @@ export default function TraitDecorations() {
       }
     }
 
-    // Gem shards orbiting
+    // Gem shards orbiting — count scales with amount (1..4)
     if (gemsGroupRef.current) {
-      gemsGroupRef.current.visible = gemActive;
-      if (gemActive) {
+      gemsGroupRef.current.visible = gemA > 0.01;
+      if (gemA > 0.01) {
         gemsGroupRef.current.rotation.y += delta * 0.35;
         gemsGroupRef.current.children.forEach((child, i) => {
           const m = child as THREE.Mesh;
@@ -72,14 +76,14 @@ export default function TraitDecorations() {
       }
     }
 
-    // Twinned companion
+    // Twinned companion — scale shrinks with amount
     if (twinRef.current) {
-      twinRef.current.visible = twinActive;
-      if (twinActive) {
+      twinRef.current.visible = twinA > 0.01;
+      if (twinA > 0.01) {
         const phase = elapsed * 0.55;
         const r = visScale * 2.4;
         twinRef.current.position.set(Math.cos(phase) * r, Math.sin(phase * 0.7) * 0.3, Math.sin(phase) * r);
-        const sz = visScale * 0.34;
+        const sz = visScale * 0.34 * twinA;
         twinRef.current.scale.set(sz, sz, sz);
         twinRef.current.rotation.y += delta * 0.5;
       }

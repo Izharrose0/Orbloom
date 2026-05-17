@@ -100,3 +100,64 @@ export function traitsByFamily(traits: string[]): Record<TraitFamily, string | n
   }
   return out;
 }
+
+// COMPOSITE PRESETS — combinations of multiple traits with custom intensities.
+// Each preset replaces the current trait set when applied (use replaceAll=true).
+export type CompositePreset = {
+  id: string;
+  name: string;
+  description: string;
+  recipe: Record<string, number>; // traitId -> amount 0..1
+};
+
+export const COMPOSITES: CompositePreset[] = [
+  {
+    id: 'corallo',
+    name: 'Corallo',
+    description: 'Vetroso, costato, gelido — un mondo cristallino.',
+    recipe: { smooth: 0.6, ridged: 0.8, frozen: 1, haloRing: 1, quiet: 1 },
+  },
+  {
+    id: 'tempesta',
+    name: 'Tempesta',
+    description: 'Spinato, allungato, bruciato — un cuore turbolento.',
+    recipe: { spiked: 0.9, prolate: 0.7, singed: 1, pulsar: 1 },
+  },
+  {
+    id: 'meditante',
+    name: 'Meditante',
+    description: 'Glassato, oblato, risonante — calma profonda.',
+    recipe: { smooth: 1, oblate: 0.8, aurorae: 0.7, resonant: 1, quiet: 1 },
+  },
+  {
+    id: 'arconte',
+    name: 'Arconte',
+    description: 'Contorto, fissurato, eclissato — geometria oscura.',
+    recipe: { fissured: 1, twisted: 0.9, eclipsed: 1, gemmed: 1 },
+  },
+  {
+    id: 'geminato_caldo',
+    name: 'Coppia Calda',
+    description: 'Liscio, allungato, geminato, bruciato — un sistema binario.',
+    recipe: { smooth: 0.5, prolate: 0.8, singed: 1, twinned: 1, pulsar: 1 },
+  },
+  {
+    id: 'erosocrater',
+    name: 'Roccia Erosa',
+    description: 'Craterato, ridotto in ridges — superficie battuta dal tempo.',
+    recipe: { cratered: 1, ridged: 0.5, singed: 0.5, haloRing: 1 },
+  },
+  {
+    id: 'biocosmico',
+    name: 'Biocosmico',
+    description: 'Aurore, anelli, gemini, risonante — vita organica intergalattica.',
+    recipe: { aurorae: 1, haloRing: 1, twinned: 1, resonant: 1, smooth: 0.4 },
+  },
+  {
+    id: 'caos_puro',
+    name: 'Caos Puro',
+    description: 'Spinato + contorto + fissurato. Massimo overload geometrico.',
+    recipe: { spiked: 1, twisted: 1, fissured: 0.7, gemmed: 1, pulsar: 1, singed: 0.7 },
+  },
+];
+

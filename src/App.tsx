@@ -6,6 +6,7 @@ import StageTransition from './components/StageTransition';
 import EclipseOverlay from './components/EclipseOverlay';
 import TraitToast from './components/TraitToast';
 import DebugPanel from './dev/DebugPanel';
+import ErrorBoundary from './components/ErrorBoundary';
 import { loadPlanet, startAutoSave } from './lib/persistence';
 
 export default function App() {
@@ -16,7 +17,7 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <ErrorBoundary>
       <Canvas
         dpr={[1, 2]}
         gl={{
@@ -39,6 +40,6 @@ export default function App() {
       <TraitToast />
       <UIOverlay />
       <DebugPanel />
-    </>
+    </ErrorBoundary>
   );
 }
