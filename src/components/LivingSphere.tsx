@@ -43,6 +43,7 @@ export default function LivingSphere() {
       uVeinDensity:  { value: 1 },
       uReflectivity: { value: 0.15 },
       uNoiseType:    { value: 0 },
+      uVeinNoiseType:{ value: 0 },
       uColorDeep:    { value: new THREE.Color('#070a1f') },
       uColorMid:     { value: new THREE.Color('#1a2a6c') },
       uColorGlow:    { value: new THREE.Color('#7df3ff') },
@@ -100,6 +101,7 @@ export default function LivingSphere() {
       uniforms.uVeinDensity.value = genome.veinDensity;
       uniforms.uReflectivity.value = 0.10 + Math.min(0.45, stage.id * 0.09);
       uniforms.uNoiseType.value = noiseTypeOverride !== null ? noiseTypeOverride : genome.noiseType;
+      uniforms.uVeinNoiseType.value = genome.veinNoiseType;
       uniforms.uColorDeep.value.copy(tmpDeep);
       uniforms.uColorMid.value.copy(tmpMid);
       uniforms.uColorGlow.value.copy(tmpGlow);

@@ -6,6 +6,7 @@ import { deriveName } from './genome';
 type PlanetRow = {
   id: string;
   name?: string | null;
+  custom_name?: string | null;
   mass: number;
   energy: number;
   evolution: number;
@@ -53,7 +54,7 @@ async function fetchPlanetRobust(id: string): Promise<{ data: PlanetRow | null; 
   // 1st attempt: full schema
   let res = await supabase
     .from('planets')
-    .select('id, name, mass, energy, evolution, peak_mass, total_taps, drifter_collected, traits, trait_amounts, updated_at')
+    .select('id, name, custom_name, mass, energy, evolution, peak_mass, total_taps, drifter_collected, traits, trait_amounts, updated_at')
     .eq('id', id)
     .maybeSingle();
 
@@ -143,6 +144,7 @@ function hydrate(row: PlanetRow, opts: { offlineCatchup: boolean }) {
     drifterCollected: row.drifter_collected ?? 0,
     traits: row.traits ?? [],
     traitAmounts: row.trait_amounts ?? {},
+    customName: row.custom_name ?? null,
     updatedAt: row.updated_at,
   });
 
@@ -166,6 +168,7 @@ export function startAutoSave(): () => void {
     const payload: PlanetRow = {
       id,
       name,
+      custom_name: s.customName,
       mass: s.mass,
       energy: s.energy,
       evolution: s.evolution,

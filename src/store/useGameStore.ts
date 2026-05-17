@@ -1,14 +1,32 @@
 import { create } from 'zustand';
-import { Genome, deriveGenome, deriveName } from '../lib/genome';
+import { Genome, deriveGenome, deriveName, deriveQuadrant } from '../lib/genome';
 import { Stage, stageForMass, STAGES } from '../lib/stages';
 import { applyTrait } from '../lib/traits';
 
 export type CosmicEventKind = 'meteor' | 'eclipse' | 'resonance' | 'bloom' | 'quasar' | 'twinning';
 
+export type EventObjective = {
+  kind: CosmicEventKind;
+  description: string;
+  target: number;
+  progress: number;
+  startedAt: number;
+  durationSec: number;
+  // baseline snapshots taken at event start, used to compute progress
+  baselineTaps: number;
+  baselineDrifters: number;
+  baselineEnergy: number;
+  baselineLastTap: number;
+  completed: boolean;
+  failed: boolean;
+};
+
 export type GameState = {
   // Identity
   userId: string;
   name: string;
+  customName: string | null;
+  quadrant: string;
   genome: Genome;
 
   // Progression
@@ -29,6 +47,7 @@ export type GameState = {
   // Cosmic events
   activeEvent: CosmicEventKind | null;
   activeEventUntil: number;
+  activeObjective: EventObjective | null;
 
   // Welcome-back
   welcomeBackAmount: number;
@@ -49,12 +68,16 @@ export type GameState = {
 
   // Actions
   init: (userId: string) => void;
-  hydrateFromRemote: (data: { mass: number; energy: number; evolution: number; updatedAt?: string | null; peakMass?: number; totalTaps?: number; drifterCollected?: number; traits?: string[]; traitAmounts?: Record<string, number> }) => void;
+  setCustomName: (name: string | null) => void;
+  hydrateFromRemote: (data: { mass: number; energy: number; evolution: number; updatedAt?: string | null; peakMass?: number; totalTaps?: number; drifterCollected?: number; traits?: string[]; traitAmounts?: Record<string, number>; customName?: string | null }) => void;
   absorbEnergy: (amount?: number) => void;
   collectDrifter: (value?: number) => void;
   setMuted: (m: boolean) => void;
   startEvent: (k: CosmicEventKind, durationSec: number) => void;
+  startObjective: (obj: EventObjective) => void;
   clearEvent: () => void;
+  completeObjective: () => void;
+  failObjective: () => void;
   consumeWelcomeBack: () => void;
   grantTrait: (traitId: string) => void;
   setTraitAmount: (traitId: string, amount: number) => void;
@@ -65,12 +88,15 @@ export type GameState = {
 };
 
 const PLACEHOLDER_GENOME: Genome = {
-  hueDeep: 220, hueGlow: 195, hueVein: 285, pulseRate: 1.0, veinDensity: 1.0, noiseType: 0, baseForm: 0,
+  hueDeep: 220, hueGlow: 195, hueVein: 285, pulseRate: 1.0, veinDensity: 1.0,
+  noiseType: 0, baseForm: 0, veinNoiseType: 0,
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
   userId: '',
   name: '—',
+  customName: null,
+  quadrant: '—',
   genome: PLACEHOLDER_GENOME,
 
   energy: 0,
@@ -88,6 +114,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   activeEvent: null,
   activeEventUntil: 0,
+  activeObjective: null,
 
   welcomeBackAmount: 0,
   welcomeBackShownAt: 0,
@@ -105,9 +132,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({
       userId,
       name: deriveName(userId),
+      quadrant: deriveQuadrant(userId),
       genome: deriveGenome(userId),
     });
   },
+
+  setCustomName: (name) => set({ customName: name && name.trim().length > 0 ? name.trim().slice(0, 32) : null }),
 
   hydrateFromRemote: (data) => {
     const mass = Math.max(1, data.mass);
@@ -122,6 +152,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       stage,
       traits: data.traits ?? [],
       traitAmounts: data.traitAmounts ?? {},
+      customName: data.customName ?? null,
     });
   },
 
@@ -192,7 +223,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   startEvent: (k, durationSec) => {
     set({ activeEvent: k, activeEventUntil: performance.now() / 1000 + durationSec });
   },
-  clearEvent: () => set({ activeEvent: null, activeEventUntil: 0 }),
+  startObjective: (obj) => set({ activeObjective: obj }),
+  clearEvent: () => set({ activeEvent: null, activeEventUntil: 0, activeObjective: null }),
+  completeObjective: () => set((s) => ({
+    activeObjective: s.activeObjective ? { ...s.activeObjective, completed: true } : null,
+  })),
+  failObjective: () => set((s) => ({
+    activeObjective: s.activeObjective ? { ...s.activeObjective, failed: true } : null,
+  })),
 
   consumeWelcomeBack: () => set({ welcomeBackAmount: 0 }),
 

@@ -13,6 +13,7 @@ import TraitDecorations from '../components/TraitDecorations';
 import MultiCoreOrbs from '../components/MultiCoreOrbs';
 import Constellation from '../components/Constellation';
 import CosmicEventsSystem from '../systems/cosmicEvents';
+import EventObjectivesSystem from '../systems/eventObjectives';
 import { useGameStore } from '../store/useGameStore';
 import { DEBUG_ENABLED } from '../dev/debug';
 
@@ -75,6 +76,7 @@ export default function MainScene() {
       <EnergyParticles />
 
       <CosmicEventsSystem onMeteorBurst={() => driftersRef.current?.triggerMeteorShower()} />
+      <EventObjectivesSystem />
 
       <EffectComposer multisampling={0}>
         <DynamicBloom />

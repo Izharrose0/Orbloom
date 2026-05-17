@@ -56,6 +56,34 @@ canvas { display: block; touch-action: none; }
   text-transform: uppercase;
 }
 
+.ui-name-input {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-family: inherit;
+  padding: 0;
+  width: 180px;
+  border-bottom: 1px solid rgba(125, 243, 255, 0.5);
+}
+
+.ui-name-reset {
+  background: none;
+  border: none;
+  color: #7da1d6;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+  pointer-events: auto;
+  opacity: 0.6;
+}
+.ui-name-reset:hover { opacity: 1; }
+
 .ui-stats {
   display: flex;
   flex-wrap: wrap;
@@ -305,6 +333,74 @@ canvas { display: block; touch-action: none; }
 }
 @keyframes trait-toast-out {
   to { opacity: 0; transform: translate(-50%, -58%); }
+}
+
+/* Event objective panel */
+.objective {
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  transform: translateY(-50%);
+  width: 240px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(8, 12, 30, 0.6);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(140, 180, 255, 0.18);
+  color: #e9efff;
+  pointer-events: none;
+  z-index: 15;
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+.objective.done   { border-color: rgba(125, 243, 255, 0.6); background: rgba(10, 30, 50, 0.7); }
+.objective.failed { border-color: rgba(255, 100, 100, 0.5); background: rgba(40, 10, 10, 0.6); }
+.objective-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.objective-kind {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #b066ff;
+}
+.objective-timer {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #7da1d6;
+}
+.objective-desc {
+  font-size: 13px;
+  color: #cfd8ff;
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+.objective-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.objective-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7df3ff, #b066ff);
+  transition: width 0.25s ease;
+}
+.objective.done .objective-bar-fill { background: #7df3ff; }
+.objective.failed .objective-bar-fill { background: #ff7d7d; }
+.objective-progress {
+  font-size: 11px;
+  color: #7da1d6;
+  letter-spacing: 0.06em;
+  text-align: right;
+}
+@media (max-width: 600px) {
+  .objective { right: 12px; width: 200px; padding: 10px 12px; }
+  .objective-desc { font-size: 12px; }
 }
 
 /* Debug panel layout: left = composites, right = scalars, top-right = main (leva default) */

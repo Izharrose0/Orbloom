@@ -117,6 +117,7 @@ uniform float uEvolution;
 uniform float uPulseRate;
 uniform float uVeinDensity;
 uniform float uReflectivity;
+uniform float uVeinNoiseType; // 0..5 — internal vein pattern noise family
 uniform vec3  uColorDeep;
 uniform vec3  uColorMid;
 uniform vec3  uColorGlow;
@@ -164,9 +165,9 @@ void main() {
   float NdotV = max(dot(N, V), 0.0);
   float fres = pow(1.0 - NdotV, 2.6);
 
-  // Veins
+  // Veins — uses its OWN noise family (uVeinNoiseType), independent from surface
   vec3 q = vLocalPos * (1.4 + uVeinDensity * 0.6) + vec3(0.0, uTime * 0.08 * uPulseRate, 0.0);
-  float veinNoise = fbm(q);
+  float veinNoise = surfaceNoise(q, uVeinNoiseType);
   float veinPattern = smoothstep(0.18, 0.0, abs(veinNoise - 0.05));
   veinPattern *= 0.6 + 0.4 * sin(uTime * 1.4 * uPulseRate + veinNoise * 6.0);
 

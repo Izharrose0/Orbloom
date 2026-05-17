@@ -1,17 +1,27 @@
 import { PREFIX, SUFFIX } from './names';
 
 export type Genome = {
-  hueDeep: number;   // 0..360
+  hueDeep: number;
   hueGlow: number;
   hueVein: number;
-  pulseRate: number; // 0.4..1.6
-  veinDensity: number; // 0.6..1.6
-  noiseType: number; // 0..5 — surface noise family
-  baseForm: number;  // 0..5 — base body geometry
+  pulseRate: number;
+  veinDensity: number;
+  noiseType: number;       // surface noise (0..5)
+  baseForm: number;        // base geometry (0..5)
+  veinNoiseType: number;   // internal vein pattern noise (0..5) — independent from surface
 };
 
 export const NOISE_TYPE_NAMES = ['Simplex', 'Ridged', 'Voronoi', 'Worley', 'Warped', 'Turbulence'];
 export const BASE_FORM_NAMES  = ['Sphere', 'Capsule', 'Torus', 'Crystal', 'Cube', 'Knot'];
+
+const QUADRANT_GREEK = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ'];
+
+export function deriveQuadrant(uuid: string): string {
+  const b = hashBytes(uuid);
+  const greek = QUADRANT_GREEK[b[10] % QUADRANT_GREEK.length];
+  const num = (b[11] % 9) + 1;
+  return `${greek}-${num}`;
+}
 
 function hashBytes(uuid: string): number[] {
   const clean = uuid.replace(/-/g, '');
@@ -41,5 +51,6 @@ export function deriveGenome(uuid: string): Genome {
   const veinDensity = 0.7 + (b[7] / 255) * 0.9;
   const noiseType = b[8] % 6;
   const baseForm = b[9] % 6;
-  return { hueDeep, hueGlow, hueVein, pulseRate, veinDensity, noiseType, baseForm };
+  const veinNoiseType = b[12] % 6;
+  return { hueDeep, hueGlow, hueVein, pulseRate, veinDensity, noiseType, baseForm, veinNoiseType };
 }
