@@ -1,9 +1,22 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three-stdlib';
 import { useGameStore } from '../store/useGameStore';
 import { visualScaleForMass } from '../lib/scale';
 import { ringTier, gemTier, twinTier } from '../lib/tiers';
+
+// Build the 6 jewel shapes used for gem shards
+function buildGemGeometries() {
+  return [
+    new THREE.OctahedronGeometry(1, 0),
+    new THREE.IcosahedronGeometry(0.9, 1),
+    new THREE.DodecahedronGeometry(0.85, 0),
+    new RoundedBoxGeometry(1.3, 1.3, 1.3, 3, 0.32),
+    new THREE.CylinderGeometry(0.55, 0.55, 1.4, 18, 1),
+    new THREE.TetrahedronGeometry(1.05, 0),
+  ];
+}
 
 const MAX_GEMS = 12;
 const MAX_RINGS = 3;
@@ -36,6 +49,8 @@ export default function TraitDecorations() {
       ),
     []
   );
+
+  const gemGeometries = useMemo(buildGemGeometries, []);
 
   useFrame((state, delta) => {
     const elapsed = state.clock.elapsedTime;
@@ -156,15 +171,18 @@ export default function TraitDecorations() {
         </mesh>
       ))}
 
-      {/* Gem shards — up to MAX_GEMS, count driven by tier */}
+      {/* Gem shards — up to MAX_GEMS, count driven by tier, varied shapes */}
       <group ref={gemsGroupRef} visible={false}>
         {Array.from({ length: MAX_GEMS }).map((_, i) => (
-          <mesh key={i} visible={false}>
-            <octahedronGeometry args={[1, 0]} />
+          <mesh
+            key={i}
+            visible={false}
+            geometry={gemGeometries[i % gemGeometries.length]}
+          >
             <meshBasicMaterial
               color={gemColors[i]}
               transparent
-              opacity={0.9}
+              opacity={0.92}
               blending={THREE.AdditiveBlending}
               depthWrite={false}
             />

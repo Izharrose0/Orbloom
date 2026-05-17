@@ -107,10 +107,23 @@ function LeftPanel() {
     { store, collapsed: true } as any
   );
 
+  useControls(
+    'Spawn drifter shape',
+    {
+      Icosa:      button(() => window.__orbloom?.spawnDrifterShape?.('icosa')),
+      Dodeca:     button(() => window.__orbloom?.spawnDrifterShape?.('dodeca')),
+      Octa:       button(() => window.__orbloom?.spawnDrifterShape?.('octa')),
+      RoundedBox: button(() => window.__orbloom?.spawnDrifterShape?.('roundedBox')),
+      Cylinder:   button(() => window.__orbloom?.spawnDrifterShape?.('cylinder')),
+      Stellated:  button(() => window.__orbloom?.spawnDrifterShape?.('stellated')),
+    },
+    { store, collapsed: false } as any
+  );
+
   return (
     <LevaPanel
       store={store}
-      titleBar={{ title: 'Composti & eventi', drag: true }}
+      titleBar={{ title: 'Composites & events', drag: true }}
       theme={{
         colors: { accent1: '#ffae66', accent2: '#ff66cc' },
         sizes: { rootWidth: '320px' },
@@ -156,7 +169,7 @@ function RightPanel() {
   return (
     <LevaPanel
       store={store}
-      titleBar={{ title: 'Tratti · scalari', drag: true }}
+      titleBar={{ title: 'Traits · scalars', drag: true }}
       theme={{
         colors: { accent1: '#7df3ff', accent2: '#b066ff' },
         sizes: { rootWidth: '320px' },

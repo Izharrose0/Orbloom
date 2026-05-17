@@ -50,8 +50,13 @@ export default function MainScene() {
     if (!DEBUG_ENABLED) return;
     window.__orbloom = window.__orbloom || {};
     window.__orbloom.triggerMeteorShower = () => driftersRef.current?.triggerMeteorShower();
+    window.__orbloom.spawnDrifterShape = (shape: string) =>
+      driftersRef.current?.spawnShape(shape as any);
     return () => {
-      if (window.__orbloom) delete window.__orbloom.triggerMeteorShower;
+      if (window.__orbloom) {
+        delete window.__orbloom.triggerMeteorShower;
+        delete window.__orbloom.spawnDrifterShape;
+      }
     };
   }, []);
 

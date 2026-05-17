@@ -18,7 +18,7 @@ export default function TraitToast() {
 
   return (
     <div className="trait-toast" key={recentTraitId + Date.now()}>
-      <div className="trait-toast-eyebrow">Nuovo tratto · {def.family}</div>
+      <div className="trait-toast-eyebrow">New trait · {def.family}</div>
       <div className="trait-toast-name">{def.name}</div>
       <div className="trait-toast-desc">{def.description}</div>
     </div>

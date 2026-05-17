@@ -8,6 +8,7 @@ declare global {
   interface Window {
     __orbloom?: {
       triggerMeteorShower?: () => void;
+      spawnDrifterShape?: (shape: string) => void;
     };
   }
 }

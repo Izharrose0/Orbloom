@@ -67,9 +67,9 @@ export default function UIOverlay() {
 
       {welcomeBackAmount > 0 && (
         <div className="welcome-back">
-          <div className="welcome-back-eyebrow">Bentornato</div>
+          <div className="welcome-back-eyebrow">Welcome back</div>
           <div className="welcome-back-body">
-            Mentre eri via il tuo pianeta è cresciuto di <strong>+{formatBig(welcomeBackAmount)}</strong> massa
+            While you were away your planet grew by <strong>+{formatBig(welcomeBackAmount)}</strong> mass
           </div>
         </div>
       )}

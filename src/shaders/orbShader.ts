@@ -190,8 +190,12 @@ void main() {
     base = mix(base, base + aur * 0.5, uTraitAurorae * 0.45);
   }
 
-  // Fresnel rim
-  vec3 rim = uColorGlow * fres * (1.1 + uPulse * 0.6);
+  // Fresnel rim — boosted so the silhouette READS as glow, not as a dark hole
+  float rimBoost = 1.4 + uPulse * 0.7 + uEvolution * 0.04;
+  vec3 rim = uColorGlow * fres * rimBoost;
+  // Extra outer halo: even more concentrated at the very edge
+  float outerRim = pow(fres, 4.5) * 1.8;
+  rim += uColorVein * outerRim;
   vec3 color = base + rim;
 
   // Fake env reflection

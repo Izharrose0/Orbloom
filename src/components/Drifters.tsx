@@ -26,6 +26,7 @@ function makeStellatedGeometry(): THREE.BufferGeometry {
 
 export type DriftersHandle = {
   triggerMeteorShower: () => void;
+  spawnShape: (shape: ShapeKind) => void;
 };
 
 const MAX_DRIFTERS = 16;
@@ -155,6 +156,14 @@ export default forwardRef<DriftersHandle, {}>(function Drifters(_, fwdRef) {
     triggerMeteorShower: () => {
       meteorBurstRemaining.current = 14;
       meteorTimer.current = 0;
+    },
+    spawnShape: (shape: ShapeKind) => {
+      const slot = drifters.find((d) => !d.alive);
+      if (!slot) return;
+      spawn(slot);
+      slot.shape = shape;
+      const idx = drifters.indexOf(slot);
+      applyDrifterToMesh(slot, idx);
     },
   }));
 

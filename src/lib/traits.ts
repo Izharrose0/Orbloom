@@ -13,32 +13,32 @@ export type TraitDef = {
 
 export const TRAITS: Record<string, TraitDef> = {
   // SURFACE — vertex displacement style
-  smooth:   { id: 'smooth',   name: 'Glassato',  family: 'surface', rarity: 'common',    description: 'Superficie quasi liscia, vetrosa.' },
-  spiked:   { id: 'spiked',   name: 'Spinato',   family: 'surface', rarity: 'common',    description: 'Spuntoni sporgenti distribuiti.' },
-  ridged:   { id: 'ridged',   name: 'Costato',   family: 'surface', rarity: 'common',    description: 'Anelli concentrici lungo un asse.' },
-  fissured: { id: 'fissured', name: 'Solcato',   family: 'surface', rarity: 'rare',      description: 'Profonde fenditure tagliano la pelle.' },
-  cratered: { id: 'cratered', name: 'Craterato', family: 'surface', rarity: 'rare',      description: 'Avvallamenti circolari incisi.' },
+  smooth:   { id: 'smooth',   name: 'Smooth',    family: 'surface', rarity: 'common',    description: 'Nearly polished, glassy surface.' },
+  spiked:   { id: 'spiked',   name: 'Spiked',    family: 'surface', rarity: 'common',    description: 'Outward protrusions scattered across the skin.' },
+  ridged:   { id: 'ridged',   name: 'Ridged',    family: 'surface', rarity: 'common',    description: 'Concentric ridges along one axis.' },
+  fissured: { id: 'fissured', name: 'Fissured',  family: 'surface', rarity: 'rare',      description: 'Deep cracks slice through the surface.' },
+  cratered: { id: 'cratered', name: 'Cratered',  family: 'surface', rarity: 'rare',      description: 'Circular impact craters etched in.' },
 
   // FORM — shape distortion
-  oblate:   { id: 'oblate',   name: 'Oblato',    family: 'form',    rarity: 'common',    description: 'Schiacciato ai poli.' },
-  prolate:  { id: 'prolate',  name: 'Allungato', family: 'form',    rarity: 'common',    description: 'Stirato lungo un asse.' },
-  twisted:  { id: 'twisted',  name: 'Contorto',  family: 'form',    rarity: 'rare',      description: 'Massa torta in spirale.' },
+  oblate:   { id: 'oblate',   name: 'Oblate',    family: 'form',    rarity: 'common',    description: 'Squashed at the poles.' },
+  prolate:  { id: 'prolate',  name: 'Prolate',   family: 'form',    rarity: 'common',    description: 'Stretched along one axis.' },
+  twisted:  { id: 'twisted',  name: 'Twisted',   family: 'form',    rarity: 'rare',      description: 'Mass wrung into a spiral.' },
 
   // COLOR — palette cast
-  singed:   { id: 'singed',   name: 'Bruciato',  family: 'color',   rarity: 'common',    description: 'Tinte calde di una stella morente.' },
-  frozen:   { id: 'frozen',   name: 'Gelato',    family: 'color',   rarity: 'common',    description: 'Riflessi gelidi di un mondo lontano.' },
-  aurorae:  { id: 'aurorae',  name: 'Aurorale',  family: 'color',   rarity: 'rare',      description: 'Bande di luce verde e magenta.' },
-  eclipsed: { id: 'eclipsed', name: 'Eclissato', family: 'color',   rarity: 'rare',      description: 'Luminosità permanente dimezzata.' },
+  singed:   { id: 'singed',   name: 'Singed',    family: 'color',   rarity: 'common',    description: 'Warm hues of a dying star.' },
+  frozen:   { id: 'frozen',   name: 'Frozen',    family: 'color',   rarity: 'common',    description: 'Icy reflections from a distant world.' },
+  aurorae:  { id: 'aurorae',  name: 'Auroral',   family: 'color',   rarity: 'rare',      description: 'Bands of green and magenta light.' },
+  eclipsed: { id: 'eclipsed', name: 'Eclipsed',  family: 'color',   rarity: 'rare',      description: 'Permanently dimmed luminosity.' },
 
   // DECORATION — extra meshes around
-  haloRing: { id: 'haloRing', name: 'Anellato',  family: 'decoration', rarity: 'common', description: 'Sottile anello equatoriale.' },
-  gemmed:   { id: 'gemmed',   name: 'Gemmato',   family: 'decoration', rarity: 'rare',   description: 'Schegge cristalline in orbita.' },
-  twinned:  { id: 'twinned',  name: 'Geminato',  family: 'decoration', rarity: 'legendary', description: 'Un piccolo compagno orbita accanto.' },
+  haloRing: { id: 'haloRing', name: 'Ringed',    family: 'decoration', rarity: 'common', description: 'A thin equatorial ring.' },
+  gemmed:   { id: 'gemmed',   name: 'Gemmed',    family: 'decoration', rarity: 'rare',   description: 'Crystal shards in orbit.' },
+  twinned:  { id: 'twinned',  name: 'Twinned',   family: 'decoration', rarity: 'legendary', description: 'A small companion orbits alongside.' },
 
   // RHYTHM — pulse / audio modulation
-  pulsar:   { id: 'pulsar',   name: 'Pulsante',  family: 'rhythm',  rarity: 'common',    description: 'Respiro raddoppiato.' },
-  quiet:    { id: 'quiet',    name: 'Quieto',    family: 'rhythm',  rarity: 'common',    description: 'Respiro lento, profondo.' },
-  resonant: { id: 'resonant', name: 'Risonante', family: 'rhythm',  rarity: 'rare',      description: 'Armoniche aggiunte al canto.' },
+  pulsar:   { id: 'pulsar',   name: 'Pulsing',   family: 'rhythm',  rarity: 'common',    description: 'Breath rate doubled.' },
+  quiet:    { id: 'quiet',    name: 'Quiet',     family: 'rhythm',  rarity: 'common',    description: 'Slow, deep breath.' },
+  resonant: { id: 'resonant', name: 'Resonant',  family: 'rhythm',  rarity: 'rare',      description: 'Extra harmonics in the song.' },
 };
 
 export const ALL_TRAIT_IDS = Object.keys(TRAITS);
@@ -112,51 +112,51 @@ export type CompositePreset = {
 
 export const COMPOSITES: CompositePreset[] = [
   {
-    id: 'corallo',
-    name: 'Corallo',
-    description: 'Vetroso, costato, gelido — un mondo cristallino.',
+    id: 'coral',
+    name: 'Coral',
+    description: 'Glassy, ridged, icy — a crystalline world.',
     recipe: { smooth: 0.6, ridged: 0.8, frozen: 1, haloRing: 1, quiet: 1 },
   },
   {
-    id: 'tempesta',
-    name: 'Tempesta',
-    description: 'Spinato, allungato, bruciato — un cuore turbolento.',
+    id: 'storm',
+    name: 'Storm',
+    description: 'Spiked, prolate, singed — a turbulent heart.',
     recipe: { spiked: 0.9, prolate: 0.7, singed: 1, pulsar: 1 },
   },
   {
-    id: 'meditante',
-    name: 'Meditante',
-    description: 'Glassato, oblato, risonante — calma profonda.',
+    id: 'meditant',
+    name: 'Meditant',
+    description: 'Smooth, oblate, resonant — deep calm.',
     recipe: { smooth: 1, oblate: 0.8, aurorae: 0.7, resonant: 1, quiet: 1 },
   },
   {
-    id: 'arconte',
-    name: 'Arconte',
-    description: 'Contorto, fissurato, eclissato — geometria oscura.',
+    id: 'archon',
+    name: 'Archon',
+    description: 'Twisted, fissured, eclipsed — dark geometry.',
     recipe: { fissured: 1, twisted: 0.9, eclipsed: 1, gemmed: 1 },
   },
   {
-    id: 'geminato_caldo',
-    name: 'Coppia Calda',
-    description: 'Liscio, allungato, geminato, bruciato — un sistema binario.',
+    id: 'warm_pair',
+    name: 'Warm Pair',
+    description: 'Smooth, prolate, twinned, singed — a binary system.',
     recipe: { smooth: 0.5, prolate: 0.8, singed: 1, twinned: 1, pulsar: 1 },
   },
   {
-    id: 'erosocrater',
-    name: 'Roccia Erosa',
-    description: 'Craterato, ridotto in ridges — superficie battuta dal tempo.',
+    id: 'eroded_rock',
+    name: 'Eroded Rock',
+    description: 'Cratered, ridged — a surface weathered by time.',
     recipe: { cratered: 1, ridged: 0.5, singed: 0.5, haloRing: 1 },
   },
   {
-    id: 'biocosmico',
-    name: 'Biocosmico',
-    description: 'Aurore, anelli, gemini, risonante — vita organica intergalattica.',
+    id: 'biocosmic',
+    name: 'Biocosmic',
+    description: 'Aurorae, rings, twins, resonant — intergalactic organic life.',
     recipe: { aurorae: 1, haloRing: 1, twinned: 1, resonant: 1, smooth: 0.4 },
   },
   {
-    id: 'caos_puro',
-    name: 'Caos Puro',
-    description: 'Spinato + contorto + fissurato. Massimo overload geometrico.',
+    id: 'pure_chaos',
+    name: 'Pure Chaos',
+    description: 'Spiked + twisted + fissured. Maximum geometric overload.',
     recipe: { spiked: 1, twisted: 1, fissured: 0.7, gemmed: 1, pulsar: 1, singed: 0.7 },
   },
 ];

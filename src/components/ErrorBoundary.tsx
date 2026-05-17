@@ -18,11 +18,11 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
       return (
         <div className="error-screen">
           <div className="error-card">
-            <div className="error-eyebrow">Anomalia cosmica</div>
-            <div className="error-title">Il pianeta ha incontrato un'irregolarità</div>
+            <div className="error-eyebrow">Cosmic anomaly</div>
+            <div className="error-title">The planet encountered an irregularity</div>
             <pre className="error-detail">{String(this.state.error.message ?? this.state.error)}</pre>
             <button className="error-reload" onClick={() => location.reload()}>
-              Ricarica
+              Reload
             </button>
           </div>
         </div>

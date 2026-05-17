@@ -46,7 +46,7 @@ export default function StageTransition() {
     <div className="stage-transition" key={flash.key}>
       <div className="stage-transition-flash" />
       <div className="stage-transition-label">
-        <span className="stage-transition-eyebrow">Mutazione</span>
+        <span className="stage-transition-eyebrow">Mutation</span>
         <span className="stage-transition-name">{flash.name}</span>
       </div>
     </div>

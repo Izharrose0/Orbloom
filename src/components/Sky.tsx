@@ -34,20 +34,24 @@ void main() {
   // Start near-black
   vec3 col = uDeep;
 
-  // VERY sparse clouds — only the highest noise peaks bleed through
+  // Gentle uniform base nebula (so there's no stark "void" zone anywhere)
+  float n0 = fbm(d * 0.9 + vec3(uTime * 0.002, 0.0, 0.0));
+  col = mix(col, uNebulaA * 0.10, smoothstep(0.0, 1.0, n0));
+
+  // Sparse clouds — only the peaks bleed through
   float n1 = fbm(d * 1.6 + vec3(uTime * 0.004, 0.0, 0.0));
-  float cloud = smoothstep(0.65, 1.0, n1);
-  col = mix(col, uNebulaA * 0.22, cloud * 0.35);
+  float cloud = smoothstep(0.55, 1.0, n1);
+  col = mix(col, uNebulaA * 0.28, cloud * 0.5);
 
-  // Even rarer wisps in second color
+  // Rarer wisps in second color
   float n2 = fbm(d * 3.4 - vec3(0.0, uTime * 0.003, 0.0));
-  float wisp = smoothstep(0.78, 1.0, n2);
-  col = mix(col, uNebulaB * 0.22, wisp * 0.28);
+  float wisp = smoothstep(0.7, 1.0, n2);
+  col = mix(col, uNebulaB * 0.28, wisp * 0.45);
 
-  // Very faint galactic band along the equator
-  float band = exp(-pow(d.y * 4.0, 2.0));
-  col += uNebulaA * 0.05 * band;
-  col += uNebulaB * 0.03 * band;
+  // Galactic band along the equator
+  float band = exp(-pow(d.y * 3.5, 2.0));
+  col += uNebulaA * 0.07 * band;
+  col += uNebulaB * 0.05 * band;
 
   gl_FragColor = vec4(col, 1.0);
 }
@@ -99,7 +103,7 @@ export default function Sky() {
       uTime:    { value: 0 },
       uNebulaA: { value: NEBULA_A.clone() },
       uNebulaB: { value: NEBULA_B.clone() },
-      uDeep:    { value: new THREE.Color('#000002') },
+      uDeep:    { value: new THREE.Color('#040616') },
     }),
     []
   );
