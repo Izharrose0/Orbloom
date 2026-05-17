@@ -226,3 +226,83 @@ canvas { display: block; touch-action: none; }
   80% { opacity: 1; }
   100% { opacity: 0; transform: translate(-50%, -55%) scale(1.02); }
 }
+
+/* Trait list */
+.trait-list {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 56px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+  user-select: none;
+}
+.trait-chip {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(8, 12, 30, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(140, 180, 255, 0.18);
+  color: #cfd8ff;
+}
+.trait-surface    { border-color: rgba(125, 243, 255, 0.4); }
+.trait-form       { border-color: rgba(176, 102, 255, 0.4); }
+.trait-color      { border-color: rgba(255, 174, 102, 0.4); }
+.trait-decoration { border-color: rgba(168, 240, 168, 0.4); }
+.trait-rhythm     { border-color: rgba(255, 102, 204, 0.4); }
+
+/* Trait toast (new acquisition) */
+.trait-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 22px 28px;
+  border-radius: 18px;
+  background: rgba(8, 12, 30, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(140, 180, 255, 0.25);
+  color: #e9efff;
+  text-align: center;
+  max-width: 320px;
+  pointer-events: none;
+  z-index: 18;
+  animation: trait-toast-in 0.6s ease-out, trait-toast-out 1.0s ease-in 4.2s forwards;
+}
+.trait-toast-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #b066ff;
+  margin-bottom: 8px;
+}
+.trait-toast-name {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 24px rgba(176, 102, 255, 0.7);
+  margin-bottom: 10px;
+}
+.trait-toast-desc {
+  font-size: 13px;
+  color: #aab8e0;
+  line-height: 1.4;
+}
+@keyframes trait-toast-in {
+  from { opacity: 0; transform: translate(-50%, -42%) scale(0.95); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes trait-toast-out {
+  to { opacity: 0; transform: translate(-50%, -58%); }
+}

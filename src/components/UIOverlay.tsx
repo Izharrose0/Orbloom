@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { setMuted as setAudioMuted, startAmbient } from '../audio/audio';
 import { formatBig, formatDecimal } from '../lib/format';
+import { TRAITS } from '../lib/traits';
 
 export default function UIOverlay() {
   const [, force] = useState(0);
@@ -29,7 +30,7 @@ export default function UIOverlay() {
     if (!next) startAmbient();
   };
 
-  const { name, mass, evolution, stage, drifterCollected } = useGameStore.getState();
+  const { name, mass, evolution, stage, drifterCollected, traits } = useGameStore.getState();
 
   return (
     <div className="ui-overlay">
@@ -49,6 +50,20 @@ export default function UIOverlay() {
       <button className="ui-button" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
         {muted ? '🔇' : '🔊'}
       </button>
+
+      {traits.length > 0 && (
+        <div className="trait-list">
+          {traits.map((t) => {
+            const def = TRAITS[t];
+            if (!def) return null;
+            return (
+              <span key={t} className={`trait-chip trait-${def.family}`} title={def.description}>
+                {def.name}
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {welcomeBackAmount > 0 && (
         <div className="welcome-back">

@@ -12,6 +12,7 @@ type PlanetRow = {
   peak_mass?: number | null;
   total_taps?: number | null;
   drifter_collected?: number | null;
+  traits?: string[] | null;
   updated_at?: string | null;
 };
 
@@ -27,7 +28,7 @@ export async function loadPlanet(): Promise<void> {
 
   const { data, error } = await supabase
     .from('planets')
-    .select('mass, energy, evolution, peak_mass, total_taps, drifter_collected, updated_at')
+    .select('mass, energy, evolution, peak_mass, total_taps, drifter_collected, traits, updated_at')
     .eq('id', id)
     .maybeSingle<PlanetRow>();
 
@@ -60,6 +61,7 @@ export async function loadPlanet(): Promise<void> {
     peakMass: data.peak_mass ?? mass,
     totalTaps: data.total_taps ?? 0,
     drifterCollected: data.drifter_collected ?? 0,
+    traits: data.traits ?? [],
     updatedAt: data.updated_at,
   });
 
@@ -88,6 +90,7 @@ export function startAutoSave(): () => void {
       peak_mass: s.peakMass,
       total_taps: s.totalTaps,
       drifter_collected: s.drifterCollected,
+      traits: s.traits,
       updated_at: new Date().toISOString(),
     };
     const serialized = JSON.stringify(payload);

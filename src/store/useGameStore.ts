@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { Genome, deriveGenome, deriveName } from '../lib/genome';
 import { Stage, stageForMass, STAGES } from '../lib/stages';
+import { applyTrait } from '../lib/traits';
 
-export type CosmicEventKind = 'meteor' | 'eclipse' | 'resonance';
+export type CosmicEventKind = 'meteor' | 'eclipse' | 'resonance' | 'bloom' | 'quasar' | 'twinning';
 
 export type GameState = {
   // Identity
@@ -30,21 +31,28 @@ export type GameState = {
   activeEventUntil: number;
 
   // Welcome-back
-  welcomeBackAmount: number; // seconds-equivalent to display once
+  welcomeBackAmount: number;
   welcomeBackShownAt: number;
+
+  // Traits
+  traits: string[];
+  recentTraitId: string | null;     // for toast
+  recentTraitShownAt: number;
 
   // UI
   muted: boolean;
 
   // Actions
   init: (userId: string) => void;
-  hydrateFromRemote: (data: { mass: number; energy: number; evolution: number; updatedAt?: string | null; peakMass?: number; totalTaps?: number; drifterCollected?: number }) => void;
+  hydrateFromRemote: (data: { mass: number; energy: number; evolution: number; updatedAt?: string | null; peakMass?: number; totalTaps?: number; drifterCollected?: number; traits?: string[] }) => void;
   absorbEnergy: (amount?: number) => void;
   collectDrifter: (value?: number) => void;
   setMuted: (m: boolean) => void;
   startEvent: (k: CosmicEventKind, durationSec: number) => void;
   clearEvent: () => void;
   consumeWelcomeBack: () => void;
+  grantTrait: (traitId: string) => void;
+  consumeRecentTrait: () => void;
   tick: (delta: number, elapsed: number) => void;
 };
 
@@ -76,6 +84,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   welcomeBackAmount: 0,
   welcomeBackShownAt: 0,
 
+  traits: [],
+  recentTraitId: null,
+  recentTraitShownAt: 0,
+
   muted: false,
 
   init: (userId) => {
@@ -97,8 +109,19 @@ export const useGameStore = create<GameState>((set, get) => ({
       totalTaps: data.totalTaps ?? 0,
       drifterCollected: data.drifterCollected ?? 0,
       stage,
+      traits: data.traits ?? [],
     });
   },
+
+  grantTrait: (traitId) => {
+    set((s) => ({
+      traits: applyTrait(s.traits, traitId),
+      recentTraitId: traitId,
+      recentTraitShownAt: performance.now() / 1000,
+    }));
+  },
+
+  consumeRecentTrait: () => set({ recentTraitId: null }),
 
   absorbEnergy: (amount = 1) => {
     const now = performance.now() / 1000;

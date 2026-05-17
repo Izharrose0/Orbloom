@@ -9,6 +9,7 @@ import CameraRig from '../components/CameraRig';
 import Sky from '../components/Sky';
 import Drifters, { DriftersHandle } from '../components/Drifters';
 import StageDecorations from '../components/StageDecorations';
+import TraitDecorations from '../components/TraitDecorations';
 import Constellation from '../components/Constellation';
 import CosmicEventsSystem from '../systems/cosmicEvents';
 import { useGameStore } from '../store/useGameStore';
@@ -62,6 +63,7 @@ export default function MainScene() {
       <EnvironmentFX />
       <LivingSphere />
       <StageDecorations />
+      <TraitDecorations />
       <Drifters ref={driftersRef} />
       <EnergyParticles />
 
