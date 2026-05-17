@@ -58,4 +58,106 @@ float fbm(vec3 p){
   }
   return v;
 }
+
+// ===== Additional noise families for surface variety =====
+
+float hashCell(vec3 p) {
+  p = fract(p * 0.3183099 + 0.1);
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+
+// 1) Ridged multifractal — sharp mountain ridges
+float ridgedFbm(vec3 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 5; i++) {
+    v += a * (1.0 - 2.0 * abs(snoise(p)));
+    p *= 2.02;
+    a *= 0.5;
+  }
+  return v * 0.6;
+}
+
+// 2) Voronoi cell noise — rocky / cellular
+float voronoi3D(vec3 x) {
+  vec3 p = floor(x);
+  vec3 f = fract(x);
+  float minD = 8.0;
+  for (int k = -1; k <= 1; k++)
+  for (int j = -1; j <= 1; j++)
+  for (int i = -1; i <= 1; i++) {
+    vec3 b = vec3(float(i), float(j), float(k));
+    vec3 o = vec3(hashCell(p + b),
+                  hashCell(p + b + vec3(17.0)),
+                  hashCell(p + b + vec3(39.0)));
+    vec3 r = b + o - f;
+    minD = min(minD, dot(r, r));
+  }
+  return sqrt(minD) * 1.5 - 0.75;
+}
+
+float voronoiFbm(vec3 p) {
+  float v = 0.0;
+  float a = 0.55;
+  for (int i = 0; i < 3; i++) {
+    v += a * voronoi3D(p);
+    p *= 2.0;
+    a *= 0.55;
+  }
+  return v;
+}
+
+// 3) Worley smooth — smoother cellular (softer edges)
+float worleySmooth(vec3 x) {
+  vec3 p = floor(x);
+  vec3 f = fract(x);
+  float minD = 4.0;
+  for (int k = -1; k <= 1; k++)
+  for (int j = -1; j <= 1; j++)
+  for (int i = -1; i <= 1; i++) {
+    vec3 b = vec3(float(i), float(j), float(k));
+    vec3 o = vec3(hashCell(p + b),
+                  hashCell(p + b + vec3(17.0)),
+                  hashCell(p + b + vec3(39.0)));
+    vec3 r = b + o - f;
+    float d = length(r);
+    minD = mix(min(minD, d), minD * d, 0.0);
+    minD = min(minD, d);
+  }
+  return smoothstep(0.0, 1.2, minD) * 2.0 - 1.0;
+}
+
+// 4) Domain-warped fbm — surreal flowing
+float warpedFbm(vec3 p) {
+  vec3 q = vec3(
+    fbm(p),
+    fbm(p + vec3(5.2, 1.3, 9.1)),
+    fbm(p + vec3(2.5, 8.4, 3.7))
+  );
+  return fbm(p + 2.4 * q);
+}
+
+// 5) Turbulence — billowy
+float turbulence(vec3 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 5; i++) {
+    v += a * abs(snoise(p));
+    p *= 2.02;
+    a *= 0.5;
+  }
+  return v * 1.6 - 0.8;
+}
+
+// Dispatcher: 0=fbm(simplex) 1=ridged 2=voronoi 3=worley 4=warped 5=turbulence
+float surfaceNoise(vec3 p, float typef) {
+  int t = int(typef + 0.5);
+  if (t == 1) return ridgedFbm(p);
+  if (t == 2) return voronoiFbm(p);
+  if (t == 3) return worleySmooth(p);
+  if (t == 4) return warpedFbm(p);
+  if (t == 5) return turbulence(p);
+  return fbm(p);
+}
 `;

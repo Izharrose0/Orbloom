@@ -1,8 +1,28 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three-stdlib';
 import { useGameStore } from '../store/useGameStore';
 import { sfxCollect } from '../audio/audio';
+
+function makeStellatedGeometry(): THREE.BufferGeometry {
+  // Base icosa, then push every original vertex outward to make smoothed spikes,
+  // then compute smooth-ish normals.
+  const g = new THREE.IcosahedronGeometry(0.7, 1);
+  const pos = g.attributes.position;
+  const tmp = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    tmp.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+    const r = tmp.length();
+    // Push vertices whose direction snaps near original 12 verts a bit outward
+    const k = Math.abs(tmp.x * tmp.y * tmp.z) * 5;
+    tmp.normalize().multiplyScalar(r * (1 + Math.min(0.5, k)));
+    pos.setXYZ(i, tmp.x, tmp.y, tmp.z);
+  }
+  pos.needsUpdate = true;
+  g.computeVertexNormals();
+  return g;
+}
 
 export type DriftersHandle = {
   triggerMeteorShower: () => void;
@@ -12,7 +32,7 @@ const MAX_DRIFTERS = 16;
 const SPAWN_MIN = 5;
 const SPAWN_MAX = 12;
 
-type ShapeKind = 'icosa' | 'dodeca' | 'octa';
+type ShapeKind = 'icosa' | 'dodeca' | 'octa' | 'roundedBox' | 'cylinder' | 'stellated';
 
 type Drifter = {
   alive: boolean;
@@ -35,9 +55,15 @@ function spawn(d: Drifter) {
   d.size = 0.22 + Math.random() * 0.22;
   d.life = 28;
   d.spin = (Math.random() - 0.5) * 1.2;
-  // Pick a shape with probability
+  // Pick a shape with probability across 6 kinds
   const r = Math.random();
-  d.shape = r < 0.55 ? 'icosa' : r < 0.85 ? 'dodeca' : 'octa';
+  d.shape =
+      r < 0.28 ? 'icosa'
+    : r < 0.46 ? 'dodeca'
+    : r < 0.6  ? 'octa'
+    : r < 0.76 ? 'roundedBox'
+    : r < 0.90 ? 'cylinder'
+    :            'stellated';
   // Color: jewel-tones, biased toward cyan/violet/amber palette
   const hueRoll = Math.random();
   const hue = hueRoll < 0.5 ? 0.5 + Math.random() * 0.1 // cyan family
@@ -110,9 +136,12 @@ export default forwardRef<DriftersHandle, {}>(function Drifters(_, fwdRef) {
   // Pre-built geometries (shared across instances)
   const geometries = useMemo(
     () => ({
-      icosa:  new THREE.IcosahedronGeometry(1, 3),
-      dodeca: new THREE.DodecahedronGeometry(1, 1),
-      octa:   new THREE.OctahedronGeometry(1, 2),
+      icosa:      new THREE.IcosahedronGeometry(1, 3),
+      dodeca:     new THREE.DodecahedronGeometry(1, 1),
+      octa:       new THREE.OctahedronGeometry(1, 2),
+      roundedBox: new RoundedBoxGeometry(1.3, 1.3, 1.3, 4, 0.28),
+      cylinder:   new THREE.CylinderGeometry(0.65, 0.65, 1.4, 28, 1, false),
+      stellated:  makeStellatedGeometry(),
     }),
     []
   );

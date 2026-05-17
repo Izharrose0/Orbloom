@@ -26,6 +26,7 @@ export default function LivingSphere() {
       uPulseRate:    { value: 1 },
       uVeinDensity:  { value: 1 },
       uReflectivity: { value: 0.15 },
+      uNoiseType:    { value: 0 },
       uColorDeep:    { value: new THREE.Color('#070a1f') },
       uColorMid:     { value: new THREE.Color('#1a2a6c') },
       uColorGlow:    { value: new THREE.Color('#7df3ff') },
@@ -61,7 +62,7 @@ export default function LivingSphere() {
     useGameStore.getState().tick(delta, elapsed);
 
     const s = useGameStore.getState();
-    const { mass, pulseIntensity, evolution, genome, stage, traits, traitAmounts } = s;
+    const { mass, pulseIntensity, evolution, genome, stage, traits, traitAmounts, noiseTypeOverride } = s;
 
     const shift = stage.paletteShift;
     tmpDeep.setHSL(((genome.hueDeep + shift) % 360) / 360, 0.7, 0.10);
@@ -82,6 +83,7 @@ export default function LivingSphere() {
       uniforms.uPulseRate.value = genome.pulseRate * pulseRateMul;
       uniforms.uVeinDensity.value = genome.veinDensity;
       uniforms.uReflectivity.value = 0.10 + Math.min(0.45, stage.id * 0.09);
+      uniforms.uNoiseType.value = noiseTypeOverride !== null ? noiseTypeOverride : genome.noiseType;
       uniforms.uColorDeep.value.copy(tmpDeep);
       uniforms.uColorMid.value.copy(tmpMid);
       uniforms.uColorGlow.value.copy(tmpGlow);

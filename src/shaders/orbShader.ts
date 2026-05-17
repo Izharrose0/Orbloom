@@ -7,6 +7,7 @@ uniform float uPulse;
 uniform float uEvolution;
 uniform float uPulseRate;
 uniform float uVeinDensity;
+uniform float uNoiseType; // 0..5 — selects noise family for surface displacement
 
 // Trait uniforms (0 = inactive, 1 = full intensity)
 uniform float uTraitSmooth;     // surface: smooth (scales down base noise)
@@ -41,9 +42,9 @@ void main() {
   float t = uTime * 0.18 * uPulseRate;
   float breath = sin(uTime * 0.6 * uPulseRate) * 0.04 + cos(uTime * 0.27 * uPulseRate) * 0.02;
 
-  float noise1 = fbm(n * 1.4 + vec3(0.0, t, 0.0));
-  float noise2 = fbm(n * 3.2 - vec3(t * 0.7, 0.0, t * 0.4));
-  float detail = fbm(n * (6.0 + uEvolution * 1.2) + vec3(t * 1.3));
+  float noise1 = surfaceNoise(n * 1.4 + vec3(0.0, t, 0.0), uNoiseType);
+  float noise2 = surfaceNoise(n * 3.2 - vec3(t * 0.7, 0.0, t * 0.4), uNoiseType);
+  float detail = surfaceNoise(n * (6.0 + uEvolution * 1.2) + vec3(t * 1.3), uNoiseType);
 
   float baseDisp =
       noise1 * 0.18

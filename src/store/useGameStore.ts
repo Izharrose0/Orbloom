@@ -43,6 +43,9 @@ export type GameState = {
   // UI
   muted: boolean;
 
+  // Debug override
+  noiseTypeOverride: number | null;
+
   // Actions
   init: (userId: string) => void;
   hydrateFromRemote: (data: { mass: number; energy: number; evolution: number; updatedAt?: string | null; peakMass?: number; totalTaps?: number; drifterCollected?: number; traits?: string[]; traitAmounts?: Record<string, number> }) => void;
@@ -94,6 +97,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   recentTraitShownAt: 0,
 
   muted: false,
+  noiseTypeOverride: null,
 
   init: (userId) => {
     set({

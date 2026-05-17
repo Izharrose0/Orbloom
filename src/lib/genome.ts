@@ -6,7 +6,10 @@ export type Genome = {
   hueVein: number;
   pulseRate: number; // 0.4..1.6
   veinDensity: number; // 0.6..1.6
+  noiseType: number; // 0..5 — surface noise family
 };
+
+export const NOISE_TYPE_NAMES = ['Simplex', 'Ridged', 'Voronoi', 'Worley', 'Warped', 'Turbulence'];
 
 function hashBytes(uuid: string): number[] {
   const clean = uuid.replace(/-/g, '');
@@ -34,5 +37,6 @@ export function deriveGenome(uuid: string): Genome {
   const hueVein = (baseHue + 60 + (b[5] % 80) - 40 + 360) % 360;
   const pulseRate = 0.5 + (b[6] / 255) * 1.0;
   const veinDensity = 0.7 + (b[7] / 255) * 0.9;
-  return { hueDeep, hueGlow, hueVein, pulseRate, veinDensity };
+  const noiseType = b[8] % 6;
+  return { hueDeep, hueGlow, hueVein, pulseRate, veinDensity, noiseType };
 }
