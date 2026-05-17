@@ -5,7 +5,7 @@ import LivingSphere from '../components/LivingSphere';
 import EnergyParticles from '../components/EnergyParticles';
 import EnvironmentFX from '../components/Environment';
 import CameraRig from '../components/CameraRig';
-import Galaxy from '../components/Galaxy';
+import Sky from '../components/Sky';
 import Drifters, { DriftersHandle } from '../components/Drifters';
 import StageDecorations from '../components/StageDecorations';
 import Constellation from '../components/Constellation';
@@ -47,7 +47,7 @@ export default function MainScene() {
   return (
     <>
       <CameraRig />
-      <Galaxy />
+      <Sky />
       <Constellation />
       <EnvironmentFX />
       <LivingSphere />

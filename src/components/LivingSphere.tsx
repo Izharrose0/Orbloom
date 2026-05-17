@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { orbVertexShader, orbFragmentShader } from '../shaders/orbShader';
 import { useGameStore } from '../store/useGameStore';
 import { visualScaleForMass } from '../lib/scale';
+import { NEBULA_A, NEBULA_B } from '../lib/skyPalette';
 
 export default function LivingSphere() {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -12,16 +13,19 @@ export default function LivingSphere() {
 
   const uniforms = useMemo(
     () => ({
-      uTime:        { value: 0 },
-      uMass:        { value: 1 },
-      uPulse:       { value: 0 },
-      uEvolution:   { value: 0 },
-      uPulseRate:   { value: 1 },
-      uVeinDensity: { value: 1 },
-      uColorDeep:   { value: new THREE.Color('#070a1f') },
-      uColorMid:    { value: new THREE.Color('#1a2a6c') },
-      uColorGlow:   { value: new THREE.Color('#7df3ff') },
-      uColorVein:   { value: new THREE.Color('#b066ff') },
+      uTime:         { value: 0 },
+      uMass:         { value: 1 },
+      uPulse:        { value: 0 },
+      uEvolution:    { value: 0 },
+      uPulseRate:    { value: 1 },
+      uVeinDensity:  { value: 1 },
+      uReflectivity: { value: 0.15 },
+      uColorDeep:    { value: new THREE.Color('#070a1f') },
+      uColorMid:     { value: new THREE.Color('#1a2a6c') },
+      uColorGlow:    { value: new THREE.Color('#7df3ff') },
+      uColorVein:    { value: new THREE.Color('#b066ff') },
+      uNebulaA:      { value: NEBULA_A.clone() },
+      uNebulaB:      { value: NEBULA_B.clone() },
     }),
     []
   );
@@ -61,6 +65,8 @@ export default function LivingSphere() {
       uniforms.uEvolution.value = evolution;
       uniforms.uPulseRate.value = genome.pulseRate;
       uniforms.uVeinDensity.value = genome.veinDensity;
+      // Reflectivity grows with stage: Seme 0.10 → Singolarità 0.55
+      uniforms.uReflectivity.value = 0.10 + Math.min(0.45, stage.id * 0.09);
       uniforms.uColorDeep.value.copy(tmpDeep);
       uniforms.uColorMid.value.copy(tmpMid);
       uniforms.uColorGlow.value.copy(tmpGlow);
@@ -111,7 +117,8 @@ export default function LivingSphere() {
             varying vec3 vNormal;
             varying vec3 vView;
             void main() {
-              vNormal = normalize(normalMatrix * normal);
+              // world-space normal & view for correct fresnel under orbit
+              vNormal = normalize(mat3(modelMatrix) * normal);
               vec4 wp = modelMatrix * vec4(position, 1.0);
               vView = normalize(cameraPosition - wp.xyz);
               gl_Position = projectionMatrix * viewMatrix * wp;

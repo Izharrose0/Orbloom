@@ -33,17 +33,17 @@ export default function UIOverlay() {
 
   return (
     <div className="ui-overlay">
-      <div className="ui-bar">
-        <span className="dot" />
-        <span style={{ color: '#e9efff', fontWeight: 600, letterSpacing: '0.14em' }}>{name}</span>
-        <span style={{ opacity: 0.4 }}>·</span>
-        <span>{stage.name}</span>
-        <span style={{ opacity: 0.4 }}>·</span>
-        <span>m {formatBig(mass)}</span>
-        <span style={{ opacity: 0.4 }}>·</span>
-        <span>e {formatDecimal(evolution)}</span>
-        <span style={{ opacity: 0.4 }}>·</span>
-        <span>★ {formatBig(drifterCollected, 0)}</span>
+      <div className="ui-topbar">
+        <div className="ui-name">
+          <span className="dot" />
+          <span className="ui-name-text">{name}</span>
+        </div>
+        <div className="ui-stats">
+          <span className="ui-stat"><span className="ui-stat-k">Stage</span><span className="ui-stat-v">{stage.name}</span></span>
+          <span className="ui-stat"><span className="ui-stat-k">Mass</span><span className="ui-stat-v">{formatBig(mass)}</span></span>
+          <span className="ui-stat"><span className="ui-stat-k">Evo</span><span className="ui-stat-v">{formatDecimal(evolution)}</span></span>
+          <span className="ui-stat"><span className="ui-stat-k">★</span><span className="ui-stat-v">{formatBig(drifterCollected, 0)}</span></span>
+        </div>
       </div>
 
       <button className="ui-button" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
