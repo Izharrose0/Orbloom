@@ -272,14 +272,36 @@ export type CensusRow = {
 
 export async function fetchAllPlanets(limit = 200): Promise<CensusRow[]> {
   if (!supabaseEnabled || !supabase) return [];
-  const { data, error } = await supabase
+
+  // Full attempt
+  let res = await supabase
     .from('planets')
     .select('id, name, custom_name, mass, evolution, drifter_collected, updated_at')
     .order('mass', { ascending: false })
     .limit(limit);
-  if (error) {
-    console.warn('[orbloom] census failed', error.message);
+
+  // Fallback if custom_name missing
+  if (res.error && /column .* does not exist/i.test(res.error.message ?? '')) {
+    console.warn('[orbloom] census: custom_name missing, falling back');
+    res = await supabase
+      .from('planets')
+      .select('id, name, mass, evolution, drifter_collected, updated_at')
+      .order('mass', { ascending: false })
+      .limit(limit);
+  }
+  // Further fallback if drifter_collected missing
+  if (res.error && /column .* does not exist/i.test(res.error.message ?? '')) {
+    console.warn('[orbloom] census: drifter_collected missing, minimal fallback');
+    res = await supabase
+      .from('planets')
+      .select('id, name, mass, evolution, updated_at')
+      .order('mass', { ascending: false })
+      .limit(limit);
+  }
+
+  if (res.error) {
+    console.warn('[orbloom] census failed:', res.error.message);
     return [];
   }
-  return (data ?? []) as CensusRow[];
+  return (res.data ?? []) as CensusRow[];
 }

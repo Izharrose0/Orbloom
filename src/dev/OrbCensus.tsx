@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { fetchAllPlanets, CensusRow } from '../lib/persistence';
 import { deriveQuadrant } from '../lib/genome';
 import { formatBig, formatDecimal } from '../lib/format';
@@ -8,7 +8,13 @@ export default function OrbCensus() {
   const [rows, setRows] = useState<CensusRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+
   const myId = useGameStore((s) => s.userId);
+  const myName = useGameStore((s) => s.name);
+  const myCustomName = useGameStore((s) => s.customName);
+  const myMass = useGameStore((s) => s.mass);
+  const myEvo = useGameStore((s) => s.evolution);
+  const myDrifters = useGameStore((s) => s.drifterCollected);
 
   const refresh = async () => {
     setLoading(true);
@@ -20,6 +26,31 @@ export default function OrbCensus() {
   useEffect(() => {
     if (open && rows === null) refresh();
   }, [open]);
+
+  // Always include the user — even if the server hasn't received their first save yet
+  const mergedRows = useMemo<CensusRow[]>(() => {
+    if (!rows) return [];
+    const hasMe = rows.some((r) => r.id === myId);
+    if (hasMe) {
+      // Use the freshest local values for the user's row
+      return rows.map((r) =>
+        r.id === myId
+          ? { ...r, custom_name: myCustomName, name: myName, mass: myMass, evolution: myEvo, drifter_collected: myDrifters }
+          : r
+      );
+    }
+    const me: CensusRow = {
+      id: myId,
+      name: myName,
+      custom_name: myCustomName,
+      mass: myMass,
+      evolution: myEvo,
+      drifter_collected: myDrifters,
+      updated_at: null,
+    };
+    // Insert me sorted by mass
+    return [me, ...rows].sort((a, b) => b.mass - a.mass);
+  }, [rows, myId, myName, myCustomName, myMass, myEvo, myDrifters]);
 
   return (
     <div className={`census ${open ? 'open' : ''}`}>
@@ -37,9 +68,8 @@ export default function OrbCensus() {
           </div>
 
           {!rows && <div className="census-empty">Loading…</div>}
-          {rows && rows.length === 0 && <div className="census-empty">No orbs yet.</div>}
 
-          {rows && rows.length > 0 && (
+          {rows && mergedRows.length > 0 && (
             <div className="census-table-wrap">
               <table className="census-table">
                 <thead>
@@ -52,7 +82,7 @@ export default function OrbCensus() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => {
+                  {mergedRows.map((r) => {
                     const sector = deriveQuadrant(r.id);
                     const isMe = r.id === myId;
                     const displayName = r.custom_name ?? r.name ?? '—';
@@ -73,7 +103,8 @@ export default function OrbCensus() {
 
           {rows && (
             <div className="census-footer">
-              {rows.length} orb{rows.length !== 1 ? 's' : ''} ranked by mass
+              {mergedRows.length} orb{mergedRows.length !== 1 ? 's' : ''} · sorted by mass
+              {rows.length === 0 && mergedRows.length === 1 && ' · server has no rows yet'}
             </div>
           )}
         </div>

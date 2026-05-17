@@ -46,17 +46,27 @@ type Drifter = {
   color: THREE.Color;
 };
 
-function spawn(d: Drifter) {
+function spawn(d: Drifter, asMeteor = false) {
   const side = Math.random() < 0.5 ? -1 : 1;
-  const yJitter = (Math.random() - 0.5) * 4;
-  const zJitter = (Math.random() - 0.5) * 3 - 1;
+  const yJitter = (Math.random() - 0.5) * (asMeteor ? 2.5 : 4);
+  const zJitter = (Math.random() - 0.5) * (asMeteor ? 2 : 3) - 1;
   d.pos.set(side * 12, yJitter, zJitter);
-  const speed = 0.55 + Math.random() * 0.5;
-  d.vel.set(-side * speed, (Math.random() - 0.5) * 0.05, (Math.random() - 0.5) * 0.05);
-  d.size = 0.22 + Math.random() * 0.22;
-  d.life = 28;
+
+  if (asMeteor) {
+    // METEOR: aim straight at the orb so it WILL pass through auto-collect radius
+    const dir = new THREE.Vector3().copy(d.pos).multiplyScalar(-1).normalize();
+    const speed = 2.0 + Math.random() * 0.8;
+    d.vel.copy(dir).multiplyScalar(speed);
+    d.size = 0.32 + Math.random() * 0.16;       // bigger than normal
+    d.life = 14;
+  } else {
+    const speed = 0.55 + Math.random() * 0.5;
+    d.vel.set(-side * speed, (Math.random() - 0.5) * 0.05, (Math.random() - 0.5) * 0.05);
+    d.size = 0.22 + Math.random() * 0.22;
+    d.life = 28;
+  }
   d.spin = (Math.random() - 0.5) * 1.2;
-  // Pick a shape with probability across 6 kinds
+
   const r = Math.random();
   d.shape =
       r < 0.28 ? 'icosa'
@@ -65,12 +75,17 @@ function spawn(d: Drifter) {
     : r < 0.76 ? 'roundedBox'
     : r < 0.90 ? 'cylinder'
     :            'stellated';
-  // Color: jewel-tones, biased toward cyan/violet/amber palette
-  const hueRoll = Math.random();
-  const hue = hueRoll < 0.5 ? 0.5 + Math.random() * 0.1 // cyan family
-            : hueRoll < 0.8 ? 0.75 + Math.random() * 0.08 // violet
-            :                 0.08 + Math.random() * 0.05; // amber
-  d.color.setHSL(hue, 0.85, 0.62);
+
+  // Meteors get warm/bright color; normal drifters keep the jewel palette
+  if (asMeteor) {
+    d.color.setHSL(0.08 + Math.random() * 0.06, 0.95, 0.7); // amber/orange
+  } else {
+    const hueRoll = Math.random();
+    const hue = hueRoll < 0.5 ? 0.5 + Math.random() * 0.1
+              : hueRoll < 0.8 ? 0.75 + Math.random() * 0.08
+              :                 0.08 + Math.random() * 0.05;
+    d.color.setHSL(hue, 0.85, 0.62);
+  }
 }
 
 // Shared fresnel-glow shader for all drifters; per-instance uniforms via cloning material
@@ -187,13 +202,11 @@ export default forwardRef<DriftersHandle, {}>(function Drifters(_, fwdRef) {
       if (meteorTimer.current <= 0) {
         const slot = drifters.find((d) => !d.alive);
         if (slot) {
-          spawn(slot);
-          slot.vel.multiplyScalar(2.4);
-          slot.size *= 0.7;
+          spawn(slot, true); // METEOR mode: aimed at orb, bigger, amber
           applyDrifterToMesh(slot, drifters.indexOf(slot));
         }
         meteorBurstRemaining.current -= 1;
-        meteorTimer.current = 0.18 + Math.random() * 0.18;
+        meteorTimer.current = 0.28 + Math.random() * 0.2;
       }
     }
 
@@ -225,7 +238,7 @@ export default forwardRef<DriftersHandle, {}>(function Drifters(_, fwdRef) {
         mat.uniforms.uTime.value = tRef.current + i * 0.7;
       }
 
-      if (r < 1.25) {
+      if (r < 1.6) {
         d.alive = false;
         useGameStore.getState().collectDrifter(6);
         sfxCollect();

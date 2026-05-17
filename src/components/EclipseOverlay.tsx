@@ -7,8 +7,9 @@ export default function EclipseOverlay() {
 
   useEffect(() => {
     if (activeEvent === 'eclipse') {
-      setOpacity(0.55);
-      const t = setTimeout(() => setOpacity(0), 6500);
+      // Gentler than before (was 0.55) — no longer reads as a "black flash"
+      setOpacity(0.28);
+      const t = setTimeout(() => setOpacity(0), 7000);
       return () => clearTimeout(t);
     } else {
       setOpacity(0);
@@ -21,9 +22,9 @@ export default function EclipseOverlay() {
         position: 'fixed',
         inset: 0,
         pointerEvents: 'none',
-        background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.0) 30%, rgba(0,0,0,0.85) 100%)',
+        background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.0) 45%, rgba(0,0,0,0.7) 100%)',
         opacity,
-        transition: 'opacity 1.2s ease',
+        transition: 'opacity 2s ease', // slower fade-in/out, no abrupt change
         zIndex: 5,
       }}
     />
