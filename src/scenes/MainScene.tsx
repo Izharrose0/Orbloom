@@ -1,6 +1,7 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import { useFrame } from '@react-three/fiber';
+import { Stats } from '@react-three/drei';
 import LivingSphere from '../components/LivingSphere';
 import EnergyParticles from '../components/EnergyParticles';
 import EnvironmentFX from '../components/Environment';
@@ -11,6 +12,7 @@ import StageDecorations from '../components/StageDecorations';
 import Constellation from '../components/Constellation';
 import CosmicEventsSystem from '../systems/cosmicEvents';
 import { useGameStore } from '../store/useGameStore';
+import { DEBUG_ENABLED } from '../dev/debug';
 
 const BLOOM_MIN = 0.6;
 const BLOOM_MAX = 1.9;
@@ -21,11 +23,10 @@ function DynamicBloom() {
   useFrame((_, delta) => {
     const { stage, pulseIntensity, activeEvent } = useGameStore.getState();
     if (!bloomRef.current) return;
-    const stageBoost = Math.min(0.6, stage.bloomBoost * 0.5); // damp the per-stage growth
+    const stageBoost = Math.min(0.6, stage.bloomBoost * 0.5);
     const pulse = Math.min(0.55, pulseIntensity * 0.35);
     const eventBoost = activeEvent === 'resonance' ? 0.25 : activeEvent === 'eclipse' ? -0.35 : 0;
     const target = Math.max(BLOOM_MIN, Math.min(BLOOM_MAX, 0.85 + stageBoost + pulse + eventBoost));
-    // temporal smoothing → no abrupt flashes
     currentRef.current += (target - currentRef.current) * Math.min(1, delta * 2.5);
     bloomRef.current.intensity = currentRef.current;
   });
@@ -44,6 +45,15 @@ function DynamicBloom() {
 export default function MainScene() {
   const driftersRef = useRef<DriftersHandle>(null);
 
+  useEffect(() => {
+    if (!DEBUG_ENABLED) return;
+    window.__orbloom = window.__orbloom || {};
+    window.__orbloom.triggerMeteorShower = () => driftersRef.current?.triggerMeteorShower();
+    return () => {
+      if (window.__orbloom) delete window.__orbloom.triggerMeteorShower;
+    };
+  }, []);
+
   return (
     <>
       <CameraRig />
@@ -61,6 +71,8 @@ export default function MainScene() {
         <DynamicBloom />
         <Vignette eskil={false} offset={0.25} darkness={0.85} />
       </EffectComposer>
+
+      {DEBUG_ENABLED && <Stats />}
     </>
   );
 }

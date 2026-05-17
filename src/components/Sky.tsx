@@ -4,118 +4,167 @@ import * as THREE from 'three';
 import { simplexNoise3D } from '../shaders/noise';
 import { NEBULA_A, NEBULA_B } from '../lib/skyPalette';
 
-// Huge inside-out sphere. Procedural galaxy band + nebulae + tiny pinpoint stars.
-// Renders FIRST (renderOrder=-1) so depth fades correctly behind everything.
-
 const SKY_RADIUS = 90;
+const STAR_COUNT = 3500;
+const STAR_RADIUS = 86; // just inside the sky sphere
 
-const skyVertex = /* glsl */ `
+// --- Nebula shader (dark, subtle, mostly black) ---
+const nebulaVertex = /* glsl */ `
 varying vec3 vDir;
 void main() {
-  // Direction from origin in WORLD space — independent from camera so it feels infinite
   vec4 wp = modelMatrix * vec4(position, 1.0);
   vDir = normalize(wp.xyz);
   gl_Position = projectionMatrix * viewMatrix * wp;
 }
 `;
 
-const skyFragment = /* glsl */ `
+const nebulaFragment = /* glsl */ `
 precision highp float;
 uniform float uTime;
 uniform vec3  uNebulaA;
 uniform vec3  uNebulaB;
 uniform vec3  uDeep;
-
 varying vec3 vDir;
 
 ${simplexNoise3D}
 
-float hash13(vec3 p) {
-  return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-}
-
-// Multi-octave star field at several densities for layered depth
-float starLayer(vec3 d, float density, float threshold, float twinkleSpeed, float sharp) {
-  vec3 cell = floor(d * density);
-  float h = hash13(cell);
-  float s = step(threshold, h);
-  // soft glow + twinkle
-  float tw = 0.5 + 0.5 * sin(uTime * twinkleSpeed + h * 50.0);
-  return s * pow(tw, sharp);
-}
-
 void main() {
   vec3 d = normalize(vDir);
 
-  // Slow nebula clouds via fbm
-  float n1 = fbm(d * 1.8 + vec3(uTime * 0.008, 0.0, 0.0));
-  float n2 = fbm(d * 4.2 - vec3(0.0, uTime * 0.005, 0.0));
-  float cloud = smoothstep(-0.05, 0.65, n1);
-  float wisp  = smoothstep(0.35, 0.95, n2);
-
-  // Galactic plane band: gaussian on y (tilted via the sphere rotation)
-  float bandY = abs(d.y);
-  float band = exp(-pow(bandY * 2.4, 2.0));
-  float dust = fbm(d * 6.0 + vec3(uTime * 0.01, 0.0, 0.0)) * 0.5 + 0.5;
-
+  // Start near-black
   vec3 col = uDeep;
-  col = mix(col, uNebulaA * 0.55, cloud * 0.85);
-  col = mix(col, uNebulaB * 0.7, wisp * 0.7);
-  // Brighten band with mild dust modulation
-  col += uNebulaA * 0.5 * band * (0.6 + 0.4 * dust);
-  col += uNebulaB * 0.25 * band * (0.4 + 0.6 * dust);
 
-  // Multi-layer stars
-  float s1 = starLayer(d, 90.0,  0.985, 0.7, 2.2);   // sparse bright
-  float s2 = starLayer(d, 240.0, 0.993, 1.3, 1.6);   // medium
-  float s3 = starLayer(d, 480.0, 0.997, 2.4, 1.0);   // tiny pinpoints
-  col += vec3(0.95, 0.95, 1.0) * s1 * 1.3;
-  col += vec3(0.85, 0.92, 1.0) * s2 * 0.85;
-  col += vec3(1.0,  0.88, 0.75) * s3 * 0.55;
+  // Sparse high-contrast clouds — only the peaks of noise show through
+  float n1 = fbm(d * 1.6 + vec3(uTime * 0.004, 0.0, 0.0));
+  float cloud = smoothstep(0.45, 0.95, n1);
+  col = mix(col, uNebulaA * 0.32, cloud * 0.45);
 
-  // Slight darkening at poles
-  col *= mix(0.7, 1.0, exp(-pow(bandY * 1.1, 2.0)));
+  // Even rarer wisps in second color
+  float n2 = fbm(d * 3.4 - vec3(0.0, uTime * 0.003, 0.0));
+  float wisp = smoothstep(0.6, 1.0, n2);
+  col = mix(col, uNebulaB * 0.32, wisp * 0.35);
+
+  // Very subtle galactic band — just a hint of warmth along the equator
+  float band = exp(-pow(d.y * 3.6, 2.0));
+  col += uNebulaA * 0.08 * band;
+  col += uNebulaB * 0.05 * band;
 
   gl_FragColor = vec4(col, 1.0);
 }
 `;
 
-export default function Sky() {
-  const meshRef = useRef<THREE.Mesh>(null);
+function buildStars() {
+  const positions = new Float32Array(STAR_COUNT * 3);
+  const colors = new Float32Array(STAR_COUNT * 3);
+  const sizes = new Float32Array(STAR_COUNT);
 
-  const uniforms = useMemo(
+  for (let i = 0; i < STAR_COUNT; i++) {
+    const r = STAR_RADIUS + (Math.random() - 0.5) * 2;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    positions[i * 3 + 2] = r * Math.cos(phi);
+
+    // Heavy-tailed brightness: mostly faint, few bright
+    const u = Math.random();
+    const bright = Math.pow(u, 5); // skew low
+    sizes[i] = 0.4 + bright * 3.6;
+
+    // Slight color variety: cool white, warm white, occasional bluish/golden
+    const tint = Math.random();
+    if (tint < 0.7) {
+      colors[i * 3]     = 0.92 + Math.random() * 0.08;
+      colors[i * 3 + 1] = 0.94 + Math.random() * 0.06;
+      colors[i * 3 + 2] = 1.0;
+    } else if (tint < 0.9) {
+      colors[i * 3]     = 1.0;
+      colors[i * 3 + 1] = 0.85;
+      colors[i * 3 + 2] = 0.7;
+    } else {
+      colors[i * 3]     = 0.7;
+      colors[i * 3 + 1] = 0.82;
+      colors[i * 3 + 2] = 1.0;
+    }
+  }
+  return { positions, colors, sizes };
+}
+
+export default function Sky() {
+  const nebRef = useRef<THREE.Mesh>(null);
+  const starsRef = useRef<THREE.Points>(null);
+
+  const nebUniforms = useMemo(
     () => ({
       uTime:    { value: 0 },
       uNebulaA: { value: NEBULA_A.clone() },
       uNebulaB: { value: NEBULA_B.clone() },
-      uDeep:    { value: new THREE.Color('#02030a') },
+      uDeep:    { value: new THREE.Color('#010206') },
     }),
     []
   );
 
+  const starsData = useMemo(buildStars, []);
+
   useFrame((_, delta) => {
-    uniforms.uTime.value += delta;
-    // EXTREMELY slow drift → senso d'infinito (no rotazione percepibile su breve termine)
-    if (meshRef.current) meshRef.current.rotation.y += delta * 0.0025;
+    nebUniforms.uTime.value += delta;
+    if (nebRef.current) nebRef.current.rotation.y += delta * 0.002;
+    if (starsRef.current) starsRef.current.rotation.y += delta * 0.0008;
   });
 
   return (
-    <mesh
-      ref={meshRef}
-      // Tilt to break the band's symmetry
-      rotation={[0.32, 0.0, 0.18]}
-      renderOrder={-10}
-      frustumCulled={false}
-    >
-      <sphereGeometry args={[SKY_RADIUS, 64, 32]} />
-      <shaderMaterial
-        side={THREE.BackSide}
-        depthWrite={false}
-        depthTest={false}
-        uniforms={uniforms}
-        vertexShader={skyVertex}
-        fragmentShader={skyFragment}
-      />
-    </mesh>
+    <group>
+      <mesh
+        ref={nebRef}
+        rotation={[0.32, 0, 0.18]}
+        renderOrder={-10}
+        frustumCulled={false}
+      >
+        <sphereGeometry args={[SKY_RADIUS, 64, 32]} />
+        <shaderMaterial
+          side={THREE.BackSide}
+          depthWrite={false}
+          depthTest={false}
+          uniforms={nebUniforms}
+          vertexShader={nebulaVertex}
+          fragmentShader={nebulaFragment}
+        />
+      </mesh>
+
+      <points ref={starsRef} renderOrder={-9} frustumCulled={false}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[starsData.positions, 3]} />
+          <bufferAttribute attach="attributes-color" args={[starsData.colors, 3]} />
+          <bufferAttribute attach="attributes-aSize" args={[starsData.sizes, 1]} />
+        </bufferGeometry>
+        <shaderMaterial
+          transparent
+          depthWrite={false}
+          depthTest={false}
+          blending={THREE.AdditiveBlending}
+          vertexColors
+          vertexShader={/* glsl */ `
+            attribute float aSize;
+            varying vec3 vColor;
+            void main() {
+              vColor = color;
+              vec4 mv = modelViewMatrix * vec4(position, 1.0);
+              gl_PointSize = aSize * (380.0 / -mv.z);
+              gl_Position = projectionMatrix * mv;
+            }
+          `}
+          fragmentShader={/* glsl */ `
+            varying vec3 vColor;
+            void main() {
+              vec2 c = gl_PointCoord - 0.5;
+              float d = length(c);
+              float a = smoothstep(0.5, 0.0, d);
+              a = pow(a, 2.2);
+              gl_FragColor = vec4(vColor, a);
+            }
+          `}
+        />
+      </points>
+    </group>
   );
 }

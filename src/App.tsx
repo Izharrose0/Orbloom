@@ -4,6 +4,7 @@ import MainScene from './scenes/MainScene';
 import UIOverlay from './components/UIOverlay';
 import StageTransition from './components/StageTransition';
 import EclipseOverlay from './components/EclipseOverlay';
+import DebugPanel from './dev/DebugPanel';
 import { loadPlanet, startAutoSave } from './lib/persistence';
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
       <EclipseOverlay />
       <StageTransition />
       <UIOverlay />
+      <DebugPanel />
     </>
   );
 }
