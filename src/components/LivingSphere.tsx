@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three-stdlib';
 import { orbVertexShader, orbFragmentShader } from '../shaders/orbShader';
 import { useGameStore } from '../store/useGameStore';
 import { visualScaleForMass } from '../lib/scale';
@@ -16,7 +17,7 @@ function makeGeometries() {
     new THREE.CapsuleGeometry(0.85, 0.9, 12, 48),               // 1 Capsule
     new THREE.TorusGeometry(0.9, 0.42, 28, 96),                 // 2 Torus
     new THREE.OctahedronGeometry(1.05, 5),                      // 3 Crystal
-    new THREE.BoxGeometry(1.5, 1.5, 1.5, 28, 28, 28),           // 4 Cube (subdivided)
+    new RoundedBoxGeometry(1.5, 1.5, 1.5, 8, 0.32),             // 4 Cube (beveled corners)
     new THREE.TorusKnotGeometry(0.7, 0.3, 128, 24, 3, 4),       // 5 Knot
   ];
 }

@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three-stdlib';
 import { orbVertexShader, orbFragmentShader } from '../shaders/orbShader';
 import { useGameStore } from '../store/useGameStore';
 import { visualScaleForMass } from '../lib/scale';
@@ -139,7 +140,7 @@ export default function MultiCoreOrbs() {
       new THREE.CapsuleGeometry(0.85, 0.9, 12, 36),
       new THREE.TorusGeometry(0.9, 0.42, 24, 64),
       new THREE.OctahedronGeometry(1.05, 4),
-      new THREE.BoxGeometry(1.5, 1.5, 1.5, 20, 20, 20),
+      new RoundedBoxGeometry(1.5, 1.5, 1.5, 6, 0.32),
       new THREE.TorusKnotGeometry(0.7, 0.3, 96, 18, 3, 4),
     ],
     []
