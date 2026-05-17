@@ -34,6 +34,8 @@ export const TRAITS: Record<string, TraitDef> = {
   haloRing: { id: 'haloRing', name: 'Ringed',    family: 'decoration', rarity: 'common', description: 'A thin equatorial ring.' },
   gemmed:   { id: 'gemmed',   name: 'Gemmed',    family: 'decoration', rarity: 'rare',   description: 'Crystal shards in orbit.' },
   twinned:  { id: 'twinned',  name: 'Twinned',   family: 'decoration', rarity: 'legendary', description: 'A small companion orbits alongside.' },
+  binary:   { id: 'binary',   name: 'Binary',    family: 'decoration', rarity: 'rare',      description: 'Two cores fused into one mass.' },
+  trinary:  { id: 'trinary',  name: 'Trinary',   family: 'decoration', rarity: 'legendary', description: 'Three cores merged in unstable equilibrium.' },
 
   // RHYTHM — pulse / audio modulation
   pulsar:   { id: 'pulsar',   name: 'Pulsing',   family: 'rhythm',  rarity: 'common',    description: 'Breath rate doubled.' },

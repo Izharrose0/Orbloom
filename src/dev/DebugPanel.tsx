@@ -2,7 +2,7 @@ import { useControls, button, folder, useCreateStore, LevaPanel } from 'leva';
 import { useGameStore } from '../store/useGameStore';
 import { STAGES, stageForMass } from '../lib/stages';
 import { TRAITS, ALL_TRAIT_IDS, COMPOSITES, TraitFamily } from '../lib/traits';
-import { NOISE_TYPE_NAMES } from '../lib/genome';
+import { NOISE_TYPE_NAMES, BASE_FORM_NAMES } from '../lib/genome';
 import { fireEvent } from '../systems/cosmicEvents';
 import { DEBUG_ENABLED } from './debug';
 
@@ -71,6 +71,17 @@ function LeftPanel() {
       Clear:     button(() => useGameStore.getState().clearEvent()),
     },
     { store } as any
+  );
+
+  useControls(
+    'Base form (overrides genome)',
+    Object.fromEntries(
+      BASE_FORM_NAMES.map((n, i) => [
+        n,
+        button(() => useGameStore.setState({ baseFormOverride: i })),
+      ]).concat([['(use genome)', button(() => useGameStore.setState({ baseFormOverride: null }))]])
+    ) as any,
+    { store, collapsed: false } as any
   );
 
   useControls(

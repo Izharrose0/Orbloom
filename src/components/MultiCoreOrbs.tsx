@@ -5,32 +5,29 @@ import { orbVertexShader, orbFragmentShader } from '../shaders/orbShader';
 import { useGameStore } from '../store/useGameStore';
 import { visualScaleForMass } from '../lib/scale';
 import { NEBULA_A, NEBULA_B } from '../lib/skyPalette';
+
 function amt(traits: string[], amounts: Record<string, number>, id: string): number {
   if (amounts[id] !== undefined) return amounts[id];
   return traits.includes(id) ? 1 : 0;
 }
 
-function makeGeometries() {
-  return [
-    new THREE.IcosahedronGeometry(1, 64),                       // 0 Sphere
-    new THREE.CapsuleGeometry(0.85, 0.9, 12, 48),               // 1 Capsule
-    new THREE.TorusGeometry(0.9, 0.42, 28, 96),                 // 2 Torus
-    new THREE.OctahedronGeometry(1.05, 5),                      // 3 Crystal
-    new THREE.BoxGeometry(1.5, 1.5, 1.5, 28, 28, 28),           // 4 Cube (subdivided)
-    new THREE.TorusKnotGeometry(0.7, 0.3, 128, 24, 3, 4),       // 5 Knot
-  ];
-}
+type CoreSpec = {
+  offset: THREE.Vector3;
+  size: number;
+};
 
-const COLOR_CAST_SINGED = new THREE.Color(1.35, 0.7, 0.45);
-const COLOR_CAST_FROZEN = new THREE.Color(0.55, 0.9, 1.25);
+const BINARY_OFFSETS: CoreSpec[] = [
+  { offset: new THREE.Vector3(0.95, -0.05, 0.0), size: 0.62 },
+];
 
-export default function LivingSphere() {
+const TRINARY_OFFSETS: CoreSpec[] = [
+  { offset: new THREE.Vector3(-0.78,  0.30, 0.45), size: 0.55 },
+  { offset: new THREE.Vector3( 0.85, -0.25,-0.30), size: 0.50 },
+];
+
+function SecondaryCore({ spec, formIdx, geometries }: { spec: CoreSpec; formIdx: number; geometries: THREE.BufferGeometry[] }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const matRef = useRef<THREE.ShaderMaterial>(null);
-  const geometries = useMemo(makeGeometries, []);
-  const baseForm = useGameStore((s) => {
-    return s.baseFormOverride !== null ? s.baseFormOverride : s.genome.baseForm;
-  });
+  const matRef  = useRef<THREE.ShaderMaterial>(null);
 
   const uniforms = useMemo(
     () => ({
@@ -48,7 +45,6 @@ export default function LivingSphere() {
       uColorVein:    { value: new THREE.Color('#b066ff') },
       uNebulaA:      { value: NEBULA_A.clone() },
       uNebulaB:      { value: NEBULA_B.clone() },
-      // Trait uniforms
       uTraitSmooth:        { value: 0 },
       uTraitSpiked:        { value: 0 },
       uTraitRidged:        { value: 0 },
@@ -67,44 +63,27 @@ export default function LivingSphere() {
     []
   );
 
-  const tmpDeep = useMemo(() => new THREE.Color(), []);
-  const tmpMid  = useMemo(() => new THREE.Color(), []);
-  const tmpGlow = useMemo(() => new THREE.Color(), []);
-  const tmpVein = useMemo(() => new THREE.Color(), []);
-
-  useFrame((state, delta) => {
-    const elapsed = state.clock.elapsedTime;
-    useGameStore.getState().tick(delta, elapsed);
-
+  useFrame((_, delta) => {
     const s = useGameStore.getState();
-    const { mass, pulseIntensity, evolution, genome, stage, traits, traitAmounts, noiseTypeOverride } = s;
-
-    const shift = stage.paletteShift;
-    tmpDeep.setHSL(((genome.hueDeep + shift) % 360) / 360, 0.7, 0.10);
-    tmpMid .setHSL(((genome.hueDeep + shift + 30) % 360) / 360, 0.65, 0.28);
-    tmpGlow.setHSL(((genome.hueGlow + shift) % 360) / 360, 0.85, 0.62);
-    tmpVein.setHSL(((genome.hueVein + shift) % 360) / 360, 0.9, 0.6);
-
-    // Pulse rate trait modifiers (continuous)
-    const pulsarA = amt(traits, traitAmounts, 'pulsar');
-    const quietA  = amt(traits, traitAmounts, 'quiet');
-    const pulseRateMul = (1 + pulsarA * 1.0) * (1 - quietA * 0.5);
+    const { mass, pulseIntensity, evolution, genome, stage, traitAmounts, traits, noiseTypeOverride } = s;
 
     if (matRef.current) {
       uniforms.uTime.value += delta;
       uniforms.uMass.value = mass;
       uniforms.uPulse.value = pulseIntensity;
       uniforms.uEvolution.value = evolution;
-      uniforms.uPulseRate.value = genome.pulseRate * pulseRateMul;
+      uniforms.uPulseRate.value = genome.pulseRate;
       uniforms.uVeinDensity.value = genome.veinDensity;
       uniforms.uReflectivity.value = 0.10 + Math.min(0.45, stage.id * 0.09);
       uniforms.uNoiseType.value = noiseTypeOverride !== null ? noiseTypeOverride : genome.noiseType;
-      uniforms.uColorDeep.value.copy(tmpDeep);
-      uniforms.uColorMid.value.copy(tmpMid);
-      uniforms.uColorGlow.value.copy(tmpGlow);
-      uniforms.uColorVein.value.copy(tmpVein);
 
-      // Wire traits as CONTINUOUS amounts (composites can use any in-between value)
+      const shift = stage.paletteShift;
+      uniforms.uColorDeep.value.setHSL(((genome.hueDeep + shift) % 360) / 360, 0.7, 0.10);
+      uniforms.uColorMid .value.setHSL(((genome.hueDeep + shift + 30) % 360) / 360, 0.65, 0.28);
+      uniforms.uColorGlow.value.setHSL(((genome.hueGlow + shift) % 360) / 360, 0.85, 0.62);
+      uniforms.uColorVein.value.setHSL(((genome.hueVein + shift) % 360) / 360, 0.9, 0.6);
+
+      // Mirror trait amounts (so secondary cores share the same look)
       uniforms.uTraitSmooth.value   = amt(traits, traitAmounts, 'smooth');
       uniforms.uTraitSpiked.value   = amt(traits, traitAmounts, 'spiked');
       uniforms.uTraitRidged.value   = amt(traits, traitAmounts, 'ridged');
@@ -115,40 +94,21 @@ export default function LivingSphere() {
       uniforms.uTraitTwisted.value  = amt(traits, traitAmounts, 'twisted');
       uniforms.uTraitAurorae.value  = amt(traits, traitAmounts, 'aurorae');
       uniforms.uTraitEclipsed.value = amt(traits, traitAmounts, 'eclipsed');
-
-      // Color cast can BLEND between singed and frozen
-      const singedA = amt(traits, traitAmounts, 'singed');
-      const frozenA = amt(traits, traitAmounts, 'frozen');
-      const colorStrength = Math.max(singedA, frozenA);
-      if (colorStrength > 0) {
-        uniforms.uColorCast.value.copy(COLOR_CAST_SINGED).multiplyScalar(singedA).add(
-          new THREE.Color().copy(COLOR_CAST_FROZEN).multiplyScalar(frozenA)
-        );
-        // Normalize if both present
-        if (singedA + frozenA > 0) {
-          uniforms.uColorCast.value.multiplyScalar(1 / (singedA + frozenA));
-        }
-        uniforms.uColorCastStrength.value = colorStrength;
-      } else {
-        uniforms.uColorCastStrength.value = 0;
-      }
     }
-
-    const visScale = visualScaleForMass(mass);
 
     if (meshRef.current) {
-      meshRef.current.scale.lerp(
-        new THREE.Vector3(visScale, visScale, visScale),
-        Math.min(1, delta * 1.5)
-      );
-      meshRef.current.rotation.y += delta * 0.04;
-      meshRef.current.rotation.x += delta * 0.012;
+      const visScale = visualScaleForMass(mass) * spec.size;
+      meshRef.current.scale.setScalar(visScale);
+      // Position offset is in WORLD space, scaled by parent visScale so cores stay "fused"
+      const parentScale = visualScaleForMass(mass);
+      meshRef.current.position.copy(spec.offset).multiplyScalar(parentScale);
+      meshRef.current.rotation.y += delta * 0.05;
+      meshRef.current.rotation.x += delta * 0.015;
     }
-
   });
 
   return (
-    <mesh ref={meshRef} geometry={geometries[baseForm] ?? geometries[0]}>
+    <mesh ref={meshRef} geometry={geometries[formIdx] ?? geometries[0]}>
       <shaderMaterial
         ref={matRef}
         uniforms={uniforms}
@@ -156,5 +116,45 @@ export default function LivingSphere() {
         fragmentShader={orbFragmentShader}
       />
     </mesh>
+  );
+}
+
+const SHARED_GEOMETRIES_PROMISE = (() => {
+  // Defer until first use to avoid duplicating with LivingSphere geometries
+  return null;
+})();
+
+export default function MultiCoreOrbs() {
+  const traits = useGameStore((s) => s.traits);
+  const traitAmounts = useGameStore((s) => s.traitAmounts);
+  const baseForm = useGameStore((s) => (s.baseFormOverride !== null ? s.baseFormOverride : s.genome.baseForm));
+
+  const binaryActive = amt(traits, traitAmounts, 'binary') > 0.01;
+  const trinaryActive = amt(traits, traitAmounts, 'trinary') > 0.01;
+
+  // Re-create geometries for secondary cores (lightweight; sphere by default for fusion clarity)
+  const geometries = useMemo(
+    () => [
+      new THREE.IcosahedronGeometry(1, 48),
+      new THREE.CapsuleGeometry(0.85, 0.9, 12, 36),
+      new THREE.TorusGeometry(0.9, 0.42, 24, 64),
+      new THREE.OctahedronGeometry(1.05, 4),
+      new THREE.BoxGeometry(1.5, 1.5, 1.5, 20, 20, 20),
+      new THREE.TorusKnotGeometry(0.7, 0.3, 96, 18, 3, 4),
+    ],
+    []
+  );
+
+  if (!binaryActive && !trinaryActive) return null;
+
+  return (
+    <group>
+      {binaryActive && BINARY_OFFSETS.map((spec, i) => (
+        <SecondaryCore key={`b${i}`} spec={spec} formIdx={baseForm} geometries={geometries} />
+      ))}
+      {trinaryActive && TRINARY_OFFSETS.map((spec, i) => (
+        <SecondaryCore key={`t${i}`} spec={spec} formIdx={baseForm} geometries={geometries} />
+      ))}
+    </group>
   );
 }

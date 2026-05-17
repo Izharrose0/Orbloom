@@ -45,6 +45,7 @@ export type GameState = {
 
   // Debug override
   noiseTypeOverride: number | null;
+  baseFormOverride: number | null;
 
   // Actions
   init: (userId: string) => void;
@@ -64,7 +65,7 @@ export type GameState = {
 };
 
 const PLACEHOLDER_GENOME: Genome = {
-  hueDeep: 220, hueGlow: 195, hueVein: 285, pulseRate: 1.0, veinDensity: 1.0, noiseType: 0,
+  hueDeep: 220, hueGlow: 195, hueVein: 285, pulseRate: 1.0, veinDensity: 1.0, noiseType: 0, baseForm: 0,
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -98,6 +99,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   muted: false,
   noiseTypeOverride: null,
+  baseFormOverride: null,
 
   init: (userId) => {
     set({

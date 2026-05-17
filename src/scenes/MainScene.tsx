@@ -10,6 +10,7 @@ import Sky from '../components/Sky';
 import Drifters, { DriftersHandle } from '../components/Drifters';
 import StageDecorations from '../components/StageDecorations';
 import TraitDecorations from '../components/TraitDecorations';
+import MultiCoreOrbs from '../components/MultiCoreOrbs';
 import Constellation from '../components/Constellation';
 import CosmicEventsSystem from '../systems/cosmicEvents';
 import { useGameStore } from '../store/useGameStore';
@@ -67,6 +68,7 @@ export default function MainScene() {
       <Constellation />
       <EnvironmentFX />
       <LivingSphere />
+      <MultiCoreOrbs />
       <StageDecorations />
       <TraitDecorations />
       <Drifters ref={driftersRef} />

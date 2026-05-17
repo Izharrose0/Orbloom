@@ -36,15 +36,18 @@ mat3 rotY(float a) {
 
 void main() {
   vec3 pos = position;
-  vec3 n = normalize(position);
+  // GEOMETRY-AGNOSTIC: use actual normal for displacement direction,
+  // sample noise on position so any geometry gets coherent surface
+  vec3 n = normalize(normal);
+  vec3 sp = position;
 
   // -------- BASE ORGANIC NOISE (scaled by smoothness trait) --------
   float t = uTime * 0.18 * uPulseRate;
   float breath = sin(uTime * 0.6 * uPulseRate) * 0.04 + cos(uTime * 0.27 * uPulseRate) * 0.02;
 
-  float noise1 = surfaceNoise(n * 1.4 + vec3(0.0, t, 0.0), uNoiseType);
-  float noise2 = surfaceNoise(n * 3.2 - vec3(t * 0.7, 0.0, t * 0.4), uNoiseType);
-  float detail = surfaceNoise(n * (6.0 + uEvolution * 1.2) + vec3(t * 1.3), uNoiseType);
+  float noise1 = surfaceNoise(sp * 1.4 + vec3(0.0, t, 0.0), uNoiseType);
+  float noise2 = surfaceNoise(sp * 3.2 - vec3(t * 0.7, 0.0, t * 0.4), uNoiseType);
+  float detail = surfaceNoise(sp * (6.0 + uEvolution * 1.2) + vec3(t * 1.3), uNoiseType);
 
   float baseDisp =
       noise1 * 0.18
@@ -58,7 +61,7 @@ void main() {
 
   // -------- SPIKES (Voronoi-ish peaks via noise threshold) --------
   // High-frequency noise; only its peaks become spikes pointing outward
-  float spikeNoise = snoise(n * 7.0 + vec3(uMass * 0.001));
+  float spikeNoise = snoise(sp * 7.0 + vec3(uMass * 0.001));
   float spikeMask = smoothstep(0.45, 0.85, spikeNoise);
   float spike = spikeMask * uTraitSpiked * 0.55;
 
@@ -77,7 +80,7 @@ void main() {
   float fissureDisp = -fissure * uTraitFissured * 0.32;
 
   // -------- CRATERS (sparse inward dimples) --------
-  float craterField = snoise(n * 4.5 + uCraterSeed);
+  float craterField = snoise(sp * 4.5 + uCraterSeed);
   float craterMask = smoothstep(0.55, 0.85, craterField);
   float craterDisp = -craterMask * uTraitCratered * 0.18;
 
