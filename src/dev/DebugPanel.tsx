@@ -5,6 +5,7 @@ import { TRAITS, ALL_TRAIT_IDS, COMPOSITES, TraitFamily } from '../lib/traits';
 import { NOISE_TYPE_NAMES, BASE_FORM_NAMES } from '../lib/genome';
 import { fireEvent } from '../systems/cosmicEvents';
 import { DEBUG_ENABLED } from './debug';
+import OrbCensus from './OrbCensus';
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -131,6 +132,18 @@ function LeftPanel() {
     { store, collapsed: false } as any
   );
 
+  useControls(
+    'Direct (bypass objectives)',
+    {
+      'Spawn meteor shower NOW': button(() => {
+        const ok = window.__orbloom?.triggerMeteorShower;
+        if (ok) ok();
+        else console.warn('[orbloom debug] meteor shower trigger not registered');
+      }),
+    },
+    { store, collapsed: false } as any
+  );
+
   return (
     <LevaPanel
       store={store}
@@ -199,6 +212,7 @@ export default function DebugPanel() {
       <div className="debug-right">
         <RightPanel />
       </div>
+      <OrbCensus />
     </>
   );
 }

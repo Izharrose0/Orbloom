@@ -14,13 +14,12 @@ export type Genome = {
 export const NOISE_TYPE_NAMES = ['Simplex', 'Ridged', 'Voronoi', 'Worley', 'Warped', 'Turbulence'];
 export const BASE_FORM_NAMES  = ['Sphere', 'Capsule', 'Torus', 'Crystal', 'Cube', 'Knot'];
 
-const QUADRANT_GREEK = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ'];
-
+// Latin letter (A-Z) + 3-digit number sector. 26 × 1000 = 26000 unique sectors.
 export function deriveQuadrant(uuid: string): string {
   const b = hashBytes(uuid);
-  const greek = QUADRANT_GREEK[b[10] % QUADRANT_GREEK.length];
-  const num = (b[11] % 9) + 1;
-  return `${greek}-${num}`;
+  const letter = String.fromCharCode(65 + (b[10] % 26)); // A-Z
+  const num = ((b[11] * 4 + b[12]) % 999) + 1; // 1-999
+  return `${letter}-${num.toString().padStart(3, '0')}`;
 }
 
 function hashBytes(uuid: string): number[] {

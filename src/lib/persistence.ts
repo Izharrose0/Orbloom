@@ -259,3 +259,27 @@ export async function fetchNeighbors(limit = 50): Promise<NeighborPlanet[]> {
   }
   return (data ?? []) as NeighborPlanet[];
 }
+
+export type CensusRow = {
+  id: string;
+  name: string | null;
+  custom_name: string | null;
+  mass: number;
+  evolution: number;
+  drifter_collected: number | null;
+  updated_at: string | null;
+};
+
+export async function fetchAllPlanets(limit = 200): Promise<CensusRow[]> {
+  if (!supabaseEnabled || !supabase) return [];
+  const { data, error } = await supabase
+    .from('planets')
+    .select('id, name, custom_name, mass, evolution, drifter_collected, updated_at')
+    .order('mass', { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.warn('[orbloom] census failed', error.message);
+    return [];
+  }
+  return (data ?? []) as CensusRow[];
+}

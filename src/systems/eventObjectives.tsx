@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGameStore, EventObjective, CosmicEventKind } from '../store/useGameStore';
 import { rollTraitFromEvent } from '../lib/traits';
@@ -57,16 +57,17 @@ function computeProgress(obj: EventObjective): number {
 
 /** Frame-driven evaluator that updates progress + decides success/failure. */
 export default function EventObjectivesSystem() {
-  const settledRef = useRef(false);
+  const settledForRef = useRef<number | null>(null);
 
   useFrame(() => {
     const obj = useGameStore.getState().activeObjective;
-    if (!obj) {
-      settledRef.current = false;
-      return;
-    }
+    if (!obj) return;
 
-    if (settledRef.current) return; // already resolved this objective
+    // If this is a NEW objective (different start time), clear settled flag
+    if (settledForRef.current !== null && settledForRef.current !== obj.startedAt) {
+      settledForRef.current = null;
+    }
+    if (settledForRef.current === obj.startedAt) return;
 
     const now = performance.now() / 1000;
     const elapsed = now - obj.startedAt;
@@ -81,14 +82,14 @@ export default function EventObjectivesSystem() {
 
     // Success
     if (progress >= obj.target && !obj.completed) {
-      settledRef.current = true;
+      settledForRef.current = obj.startedAt;
       resolveObjective(obj.kind, true);
       return;
     }
 
     // Timeout failure
     if (elapsed >= obj.durationSec && progress < obj.target) {
-      settledRef.current = true;
+      settledForRef.current = obj.startedAt;
       resolveObjective(obj.kind, false);
     }
   });
