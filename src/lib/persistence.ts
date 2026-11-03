@@ -273,8 +273,8 @@ export type CensusRow = {
 export async function fetchAllPlanets(limit = 200): Promise<CensusRow[]> {
   if (!supabaseEnabled || !supabase) return [];
 
-  // Full attempt
-  let res = await supabase
+  // Full attempt (typed loosely: fallbacks select narrower column sets)
+  let res: { data: any[] | null; error: any } = await supabase
     .from('planets')
     .select('id, name, custom_name, mass, evolution, drifter_collected, updated_at')
     .order('mass', { ascending: false })
