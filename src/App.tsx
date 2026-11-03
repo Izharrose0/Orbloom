@@ -1,5 +1,7 @@
 import { Canvas } from '@react-three/fiber';
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useGameStore } from './store/useGameStore';
+import { QUALITY_PRESETS } from './lib/quality';
 import MainScene from './scenes/MainScene';
 import UIOverlay from './components/UIOverlay';
 import StageTransition from './components/StageTransition';
@@ -11,6 +13,10 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { loadPlanet, startAutoSave } from './lib/persistence';
 
 export default function App() {
+  const quality = useGameStore((s) => s.quality);
+  const [canvasKey, setCanvasKey] = useState(0);
+  const [contextLost, setContextLost] = useState(false);
+
   useEffect(() => {
     loadPlanet();
     const stop = startAutoSave();
@@ -20,7 +26,15 @@ export default function App() {
   return (
     <ErrorBoundary>
       <Canvas
-        dpr={[1, 2]}
+        key={canvasKey}
+        onCreated={({ gl }) => {
+          // WebGL context recovery: mobile browsers drop contexts under memory
+          // pressure. Remount the canvas when the context comes back.
+          const el = gl.domElement;
+          el.addEventListener('webglcontextlost', (e) => { e.preventDefault(); setContextLost(true); }, false);
+          el.addEventListener('webglcontextrestored', () => { setContextLost(false); setCanvasKey((k) => k + 1); }, false);
+        }}
+        dpr={QUALITY_PRESETS[quality].dpr}
         gl={{
           antialias: false,
           alpha: false,
@@ -36,6 +50,12 @@ export default function App() {
           <MainScene />
         </Suspense>
       </Canvas>
+      {contextLost && (
+        <div className="context-lost" role="status">
+          <div>Reconnecting to the cosmos…</div>
+          <button onClick={() => { setContextLost(false); setCanvasKey((k) => k + 1); }}>Retry now</button>
+        </div>
+      )}
       <EclipseOverlay />
       <StageTransition />
       <TraitToast />

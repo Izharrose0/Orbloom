@@ -28,7 +28,7 @@ export default function StageTransition() {
         lastShownId.current = stage.id;
         setFlash({ name: stage.name, key: Date.now() });
         sfxMutation();
-        if ('vibrate' in navigator) navigator.vibrate?.([20, 80, 60]);
+        if ((navigator as any).userActivation?.hasBeenActive) navigator.vibrate?.([20, 80, 60]);
         setTimeout(() => setFlash(null), 6000);
       }, 6200);
       return () => clearTimeout(wait);
@@ -36,7 +36,7 @@ export default function StageTransition() {
     lastShownId.current = stage.id;
     setFlash({ name: stage.name, key: Date.now() });
     sfxMutation();
-    if ('vibrate' in navigator) navigator.vibrate?.([20, 80, 60]);
+    if ((navigator as any).userActivation?.hasBeenActive) navigator.vibrate?.([20, 80, 60]);
     const t = setTimeout(() => setFlash(null), 6000);
     return () => clearTimeout(t);
   }, [stage.id, stage.name, welcomeBackAmount]);

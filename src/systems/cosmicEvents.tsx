@@ -5,6 +5,16 @@ import { sfxResonance, sfxStageUp, sfxCollect } from '../audio/audio';
 import { startObjectiveForEvent } from './eventObjectives';
 import { discover } from '../lib/discoveries';
 import { sceneHooks, phenomena, PhenomenonKind } from './fx';
+import { hashString } from '../lib/rng';
+
+/** Correlated sky: for sky-wide phenomena, the path depends on the player's sector
+ *  letter and the current UTC hour, so organisms in the same sector see the same
+ *  comet or supernova in the same part of the sky during that hour. */
+function sharedSkySeed(kind: string): number {
+  const sector = useGameStore.getState().quadrant.charAt(0) || 'A';
+  const hour = Math.floor(Date.now() / 3_600_000);
+  return (hashString(`${kind}:${sector}:${hour}`) % 10000) / 10000;
+}
 
 // Event director. Four tiers:
 //   ambient     — common, purely atmospheric, no objective (comets, stellar wind, aurora veils)
@@ -72,7 +82,7 @@ export default function CosmicEventsSystem({ onMeteorBurst }: { onMeteorBurst: (
       }
     } else if (canCelestial && roll > 0.97) {
       const c = weightedPick(CELESTIAL, (p) => p.w)!;
-      phenomena.start(c.kind, c.dur);
+      phenomena.start(c.kind, c.dur, sharedSkySeed(c.kind));
       L.lastCelestialAt = t;
       if (discover('celestial-' + c.kind)) {
         useGameStore.getState().showCaption(
@@ -82,7 +92,7 @@ export default function CosmicEventsSystem({ onMeteorBurst }: { onMeteorBurst: (
     } else {
       const a = weightedPick(AMBIENT, (p) => (L.lastFired[p.kind] && t - L.lastFired[p.kind] < 90 ? 0 : p.w));
       if (a) {
-        phenomena.start(a.kind, a.dur);
+        phenomena.start(a.kind, a.dur, a.kind === 'comet' ? sharedSkySeed('comet') : Math.random());
         L.lastFired[a.kind] = t;
       }
     }

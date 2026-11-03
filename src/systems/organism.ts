@@ -16,6 +16,7 @@ import { computeMorphology, Morphology, MAX_LOBES } from '../lib/morphology';
 import { computeBiomes, BiomeState } from '../lib/biomes';
 import { visualScaleForMass } from '../lib/scale';
 import { rippleFx, arrivalFx, phenomena } from './fx';
+import { setAudioProfile } from '../audio/audio';
 import type { Genome } from '../lib/genome';
 
 function amt(traits: string[], amounts: Record<string, number>, id: string): number {
@@ -108,6 +109,9 @@ export const organismState = {
   version: 0,
 };
 
+// Thin forms (torus tube, knot) fold over themselves if pushed as hard as a sphere.
+const FORM_MORPH = [1, 1, 0.55, 0.9, 0.85, 0.38];
+
 const COLOR_CAST_SINGED = new THREE.Color(1.35, 0.7, 0.45);
 const COLOR_CAST_FROZEN = new THREE.Color(0.55, 0.9, 1.25);
 
@@ -147,6 +151,7 @@ export function OrganismController() {
     biomeLevel: 0,
     eventTintAmt: 0,
     initialized: false,
+    nextAudioAt: 0,
   }), []);
 
   // Ripples + absorption from gameplay
@@ -207,7 +212,7 @@ export function OrganismController() {
         if (organismState.root) organismState.root.scale.setScalar(visualScaleForMass(mass));
         // first frame (or new genome): snap instead of growing from nothing
         live.initialized = true;
-        snapMorph(organismState.morph);
+        snapMorph(organismState.morph, FORM_MORPH[s.baseFormOverride ?? genome.baseForm] ?? 1);
         live.lobeSharp = organismState.morph.lobeSharp;
         live.lobeRadius = organismState.morph.lobeRadius;
         live.nucleus = organismState.morph.nucleus;
@@ -218,22 +223,23 @@ export function OrganismController() {
 
     // ---------- smooth morphology toward targets: milestones GROW in over seconds ----------
     const m = organismState.morph;
+    const fm = FORM_MORPH[s.baseFormOverride ?? genome.baseForm] ?? 1;
     if (m) {
       const k = 1 - Math.exp(-delta * 0.55);
       const lobes = U.uLobes.value;
       for (let i = 0; i < MAX_LOBES; i++) {
         const L = lobes[i];
         L.x = m.lobes[i * 4]; L.y = m.lobes[i * 4 + 1]; L.z = m.lobes[i * 4 + 2];
-        L.w += (m.lobes[i * 4 + 3] - L.w) * k;
+        L.w += (m.lobes[i * 4 + 3] * fm - L.w) * k;
       }
       live.lobeSharp += (m.lobeSharp - live.lobeSharp) * k;
       live.lobeRadius += (m.lobeRadius - live.lobeRadius) * k;
       U.uLobeSharp.value = live.lobeSharp;
       U.uLobeRadius.value = live.lobeRadius;
       U.uFin.value.x = m.fin[0]; U.uFin.value.y = m.fin[1]; U.uFin.value.z = m.fin[2];
-      U.uFin.value.w += (m.fin[3] - U.uFin.value.w) * k;
+      U.uFin.value.w += (m.fin[3] * fm - U.uFin.value.w) * k;
       U.uFin2.value.x = m.fin2[0]; U.uFin2.value.y = m.fin2[1]; U.uFin2.value.z = m.fin2[2];
-      U.uFin2.value.w += (m.fin2[3] - U.uFin2.value.w) * k;
+      U.uFin2.value.w += (m.fin2[3] * fm - U.uFin2.value.w) * k;
       live.nucleus += (m.nucleus - live.nucleus) * k;
       live.veinGrowth += (m.veinGrowth - live.veinGrowth) * k;
       live.biomeLevel += (Math.min(1, m.growthDensity * 1.2) - live.biomeLevel) * k;
@@ -247,7 +253,10 @@ export function OrganismController() {
     // ---------- palette ----------
     const shift = stage.paletteShift;
     U.uColorDeep.value.setHSL(((genome.hueDeep + shift) % 360) / 360, 0.6, 0.07);
-    U.uColorMid.value.setHSL(((genome.hueDeep + shift + 30) % 360) / 360, 0.42, 0.19);
+    // half of all genomes tint their membrane from the glow hue (cool bodies, warm veins),
+    // the other half from the deep hue (warm bodies) — same genome hues, more variety
+    const membraneHue = (genome.seed & 1) ? genome.hueGlow - 25 : genome.hueDeep + 30;
+    U.uColorMid.value.setHSL((((membraneHue + shift) % 360) + 360) % 360 / 360, 0.42, 0.19);
     U.uColorGlow.value.setHSL(((genome.hueGlow + shift) % 360) / 360, 0.85, 0.6);
     U.uColorVein.value.setHSL(((genome.hueVein + shift) % 360) / 360, 0.88, 0.58);
     U.uColorAccent.value.setHSL(((genome.hueAccent + shift * 0.5) % 360) / 360, 0.8, 0.62);
@@ -294,6 +303,18 @@ export function OrganismController() {
     if (tint) tmp.tint.set(tint[0], tint[1], tint[2]);
     U.uEventTint.value.set(tmp.tint.x, tmp.tint.y, tmp.tint.z, live.eventTintAmt);
 
+    // ---------- adaptive soundscape (1 Hz) ----------
+    if (now >= live.nextAudioAt) {
+      live.nextAudioAt = now + 1;
+      setAudioProfile({
+        transpose: (genome.seed % 12) - 5,
+        breathHz: (0.55 * U.uPulseRate.value) / (Math.PI * 2),
+        stage: stage.id,
+        idle: U.uIdle.value,
+        brightness: m?.persona.luminosity ?? 0.5,
+      });
+    }
+
     // ---------- transform & camera-in-organism-space ----------
     const root = organismState.root;
     const vis = visualScaleForMass(mass);
@@ -311,18 +332,18 @@ export function OrganismController() {
       let maxLobe = 0;
       for (let i = 0; i < MAX_LOBES; i++) maxLobe = Math.max(maxLobe, m.lobes[i * 4 + 3]);
       const formExt = (s.baseFormOverride ?? genome.baseForm) === 1 || amt(traits, traitAmounts, 'prolate') > 0.3 ? 1.35 : 1.15;
-      organismState.boundRadius = vis * (formExt + 0.2 + maxLobe + Math.max(m.fin[3], m.fin2[3]) * 0.8);
+      organismState.boundRadius = vis * (formExt + 0.2 + (maxLobe + Math.max(m.fin[3], m.fin2[3]) * 0.8) * fm);
     }
   }, -1);
 
   return null;
 }
 
-function snapMorph(m: Morphology) {
+function snapMorph(m: Morphology, fm: number) {
   const lobes = U.uLobes.value;
-  for (let i = 0; i < MAX_LOBES; i++) lobes[i].set(m.lobes[i * 4], m.lobes[i * 4 + 1], m.lobes[i * 4 + 2], m.lobes[i * 4 + 3]);
-  U.uFin.value.set(...m.fin);
-  U.uFin2.value.set(...m.fin2);
+  for (let i = 0; i < MAX_LOBES; i++) lobes[i].set(m.lobes[i * 4], m.lobes[i * 4 + 1], m.lobes[i * 4 + 2], m.lobes[i * 4 + 3] * fm);
+  U.uFin.value.set(m.fin[0], m.fin[1], m.fin[2], m.fin[3] * fm);
+  U.uFin2.value.set(m.fin2[0], m.fin2[1], m.fin2[2], m.fin2[3] * fm);
   U.uStageF.value = m.stageF;
 }
 

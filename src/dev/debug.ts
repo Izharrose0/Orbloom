@@ -9,6 +9,10 @@ declare global {
     __orbloom?: {
       triggerMeteorShower?: () => void;
       spawnDrifterShape?: (shape: string) => void;
+      fireEvent?: (kind: string) => void;
+      phenomenon?: (kind: string, dur?: number) => void;
+      setMass?: (m: number) => void;
+      perf?: () => { quality: number; frames: number };
     };
   }
 }

@@ -39,7 +39,10 @@ void main() {
   float ndv = max(dot(normalize(vN), normalize(vV)), 0.0);
   float fres = pow(1.0 - ndv, 2.5);
   float beat = 0.5 + 0.5 * sin(uTime * 0.55 - uPhase);
-  vec3 col = uDeep * 1.5 + uAccent * (0.25 + 0.35 * beat) * ndv + uGlow * fres * 0.9;
+  // translucent cell: dark membrane, a breathing nucleus, glowing limb
+  float nucleus = pow(ndv, 4.0) * (0.35 + 0.45 * beat);
+  float mottle = 0.75 + 0.25 * sin(vP.x * 9.0 + uTime * 0.4) * sin(vP.y * 7.0 - uTime * 0.3);
+  vec3 col = uDeep * 1.8 * mottle + uAccent * nucleus + uGlow * fres * 0.8;
   col = clamp(col, 0.0, 1.0);
   gl_FragColor = vec4(col, uAppear);
 }

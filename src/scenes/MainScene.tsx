@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
+import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';
+import { BlendFunction } from 'postprocessing';
 import { useFrame } from '@react-three/fiber';
-import { Stats } from '@react-three/drei';
+import { Stats, PerformanceMonitor } from '@react-three/drei';
+import { QUALITY_PRESETS } from '../lib/quality';
 import LivingSphere from '../components/LivingSphere';
 import EnergyParticles from '../components/EnergyParticles';
 import EnvironmentFX from '../components/Environment';
@@ -18,7 +20,9 @@ import EventObjectivesSystem from '../systems/eventObjectives';
 import { useGameStore } from '../store/useGameStore';
 import { DEBUG_ENABLED } from '../dev/debug';
 import { OrganismController } from '../systems/organism';
-import { sceneHooks } from '../systems/fx';
+import { sceneHooks, phenomena } from '../systems/fx';
+import { fireEvent } from '../systems/cosmicEvents';
+import { stageForMass } from '../lib/stages';
 import EventPhenomena from '../systems/phenomena';
 import PassiveBehaviors from '../systems/passiveBehaviors';
 
@@ -51,6 +55,18 @@ function DynamicBloom() {
   );
 }
 
+function PostFX() {
+  const quality = useGameStore((s) => s.quality);
+  const preset = QUALITY_PRESETS[quality];
+  return (
+    <EffectComposer multisampling={0}>
+      <DynamicBloom />
+      {preset.grain ? <Noise premultiply blendFunction={BlendFunction.SCREEN} opacity={0.035} /> : <></>}
+      <Vignette eskil={false} offset={0.3} darkness={0.7} />
+    </EffectComposer>
+  );
+}
+
 export default function MainScene() {
   const driftersRef = useRef<DriftersHandle>(null);
 
@@ -66,6 +82,9 @@ export default function MainScene() {
     window.__orbloom.triggerMeteorShower = () => driftersRef.current?.triggerMeteorShower();
     window.__orbloom.spawnDrifterShape = (shape: string) =>
       driftersRef.current?.spawnShape(shape as any);
+    window.__orbloom.fireEvent = (kind: string) => fireEvent(kind as any);
+    window.__orbloom.phenomenon = (kind: string, dur = 15) => phenomena.start(kind as any, dur);
+    window.__orbloom.setMass = (m: number) => useGameStore.setState({ mass: m, evolution: Math.log2(1 + m), stage: stageForMass(m) });
     return () => {
       if (window.__orbloom) {
         delete window.__orbloom.triggerMeteorShower;
@@ -94,10 +113,18 @@ export default function MainScene() {
       <PassiveBehaviors />
       <EventPhenomena />
 
-      <EffectComposer multisampling={0}>
-        <DynamicBloom />
-        <Vignette eskil={false} offset={0.25} darkness={0.85} />
-      </EffectComposer>
+      {/* Steps quality down (never up on its own) if the frame rate stays low */}
+      <PerformanceMonitor
+        flipflops={3}
+        onDecline={() => {
+          const { quality, setQuality } = useGameStore.getState();
+          let forced = false;
+          try { forced = localStorage.getItem('orbloom.quality') !== null || new URLSearchParams(location.search).has('quality'); } catch { /* ignore */ }
+          if (!forced && quality > 0) setQuality((quality - 1) as 0 | 1);
+        }}
+      />
+
+      <PostFX />
 
       {DEBUG_ENABLED && <Stats />}
     </>

@@ -68,7 +68,7 @@ export function makeBodyGeometries(detail: number): THREE.BufferGeometry[] {
     weld(new THREE.CapsuleGeometry(0.85, 0.9, Math.round(14 * k), Math.round(56 * k))),            // 1 Capsule
     weld(new THREE.TorusGeometry(0.9, 0.42, Math.round(32 * k), Math.round(110 * k))),             // 2 Torus
     crystalGeometry(detail),                                                                       // 3 Crystal
-    weld(new RoundedBoxGeometry(1.5, 1.5, 1.5, Math.max(4, Math.round(12 * k)), 0.32)),           // 4 Cube (beveled)
+    weld(new RoundedBoxGeometry(1.5, 1.5, 1.5, Math.max(4, Math.round(12 * k)), 0.48)),           // 4 Cube (soft bevel: a pillowy cuboid)
     weld(new THREE.TorusKnotGeometry(0.7, 0.3, Math.round(170 * k), Math.round(28 * k), 3, 4)),   // 5 Knot
   ];
 }

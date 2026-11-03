@@ -149,7 +149,7 @@ function Corona() {
             float rays = 0.75 + 0.25 * sin(ang * 7.0 + uTime * 0.15) * sin(ang * 3.0 - uTime * 0.11);
             float fall = smoothstep(1.0, uInner, r) ;
             float glow = pow(fall, 2.6) * rays;
-            gl_FragColor = vec4(uColor, glow * (0.13 + uPulse * 0.06) * uAppear);
+            gl_FragColor = vec4(uColor, glow * (0.09 + uPulse * 0.05) * uAppear);
           }
         `}
       />
@@ -270,8 +270,8 @@ function AccretionDisc() {
             float spiral = 0.5 + 0.5 * sin(ang * 5.0 + uTime * 0.9 - r * 7.0);
             float fine = 0.5 + 0.5 * sin(ang * 23.0 - uTime * 1.7 + r * 30.0);
             float radial = smoothstep(1.0, 1.15, r) * (1.0 - smoothstep(1.35, 1.9, r));
-            float a = (spiral * 0.6 + fine * 0.2) * radial;
-            gl_FragColor = vec4(mix(uColor, uAccent, spiral * 0.4), a * 0.42 * uAppear);
+            float a = (spiral * 0.55 + fine * 0.08 + 0.15) * radial;
+            gl_FragColor = vec4(mix(uColor, uAccent, spiral * 0.4), a * 0.26 * uAppear);
           }
         `}
       />

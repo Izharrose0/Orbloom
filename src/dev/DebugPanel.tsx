@@ -2,7 +2,30 @@ import { useControls, button, folder, useCreateStore, LevaPanel } from 'leva';
 import { useGameStore } from '../store/useGameStore';
 import { STAGES, stageForMass } from '../lib/stages';
 import { TRAITS, ALL_TRAIT_IDS, COMPOSITES, TraitFamily } from '../lib/traits';
-import { NOISE_TYPE_NAMES, BASE_FORM_NAMES } from '../lib/genome';
+import { NOISE_TYPE_NAMES, BASE_FORM_NAMES, deriveGenome } from '../lib/genome';
+import { phenomena } from '../systems/fx';
+import { persistQuality, QualityLevel } from '../lib/quality';
+import { SINGULARITY_MASS } from '../lib/morphology';
+
+// Genome presets: one per base form, chosen for variety (noise families, hues).
+const GENOME_PRESETS: Record<string, string> = {
+  'Sphere · turbulence': 'c255404e-4fb4-4003-4d66-08697a8d41be',
+  'Capsule · turbulence': 'a4c123b1-612d-d272-d137-1c17149d4395',
+  'Torus · ridged': 'cc3fc162-6e53-a130-43b0-26c48bbf33fe',
+  'Crystal · simplex': '36b3216f-daee-b975-729f-ae923d5a4fd1',
+  'Cube · ridged': 'd6ba2b0a-ee0c-a923-7328-81584d8c4fa2',
+  'Knot · warped': '5ec84d8d-bc74-2547-70f5-8904dba41ecc',
+};
+
+function previewGenome(uuid: string | null) {
+  const s = useGameStore.getState();
+  // visual-only: the save row stays tied to the real userId
+  useGameStore.setState({ genome: deriveGenome(uuid ?? s.userId), baseFormOverride: null, noiseTypeOverride: null });
+}
+
+function randomUuid() {
+  return crypto.randomUUID ? crypto.randomUUID() : '00000000-0000-4000-8000-' + Math.random().toString(16).slice(2, 14).padEnd(12, '0');
+}
 import { fireEvent } from '../systems/cosmicEvents';
 import { DEBUG_ENABLED } from './debug';
 import OrbCensus from './OrbCensus';
@@ -75,6 +98,44 @@ function LeftPanel() {
   );
 
   useControls(
+    'Genome preview (visual only)',
+    Object.fromEntries([
+      ...Object.entries(GENOME_PRESETS).map(([n, id]) => [n, button(() => previewGenome(id))]),
+      ['Random genome', button(() => previewGenome(randomUuid()))],
+      ['(my genome)', button(() => previewGenome(null))],
+    ]) as any,
+    { store, collapsed: true } as any
+  );
+
+  useControls(
+    'Look & quality',
+    {
+      'Toggle legacy look (1.x)': button(() => useGameStore.setState((st) => ({ legacyLook: !st.legacyLook }))),
+      'Quality: low': button(() => { useGameStore.getState().setQuality(0); persistQuality(0 as QualityLevel); }),
+      'Quality: medium': button(() => { useGameStore.getState().setQuality(1); persistQuality(1 as QualityLevel); }),
+      'Quality: high': button(() => { useGameStore.getState().setQuality(2); persistQuality(2 as QualityLevel); }),
+      'Quality: auto': button(() => persistQuality(null)),
+      'Toggle reduced motion': button(() => useGameStore.setState((st) => ({ reducedMotion: !st.reducedMotion }))),
+      'Toggle phone frame': button(() => document.body.classList.toggle('debug-phone')),
+    },
+    { store, collapsed: true } as any
+  );
+
+  useControls(
+    'Behaviour & phenomena',
+    {
+      'Simulate long idle': button(() => useGameStore.setState({ lastTapAt: -1000, lastInteractionAt: -1000 })),
+      'Wake up': button(() => useGameStore.getState().touchInteraction()),
+      Comet: button(() => phenomena.start('comet', 14)),
+      'Stellar wind': button(() => phenomena.start('stellarWind', 16)),
+      Aurora: button(() => phenomena.start('aurora', 18)),
+      'Supernova (rare)': button(() => phenomena.start('supernova', 28)),
+      'Leviathan (rare)': button(() => phenomena.start('leviathan', 45)),
+    },
+    { store, collapsed: true } as any
+  );
+
+  useControls(
     'Base form (overrides genome)',
     Object.fromEntries(
       BASE_FORM_NAMES.map((n, i) => [
@@ -108,15 +169,19 @@ function LeftPanel() {
       },
       'x10':   button(() => bumpMass(10)),
       'x100':  button(() => bumpMass(100)),
+      'Next epoch (x2)': button(() => {
+        const m = useGameStore.getState().mass;
+        setMass(m < SINGULARITY_MASS * 2 ? SINGULARITY_MASS * 2 + 1 : m * 2);
+      }),
       'Reset': button(() => setMass(1)),
     },
-    { store, collapsed: true } as any
+    { store, collapsed: false } as any
   );
 
   useControls(
     'Jump to stage',
     Object.fromEntries(STAGES.map((s) => [s.name, button(() => setMass(s.threshold + 0.5))])),
-    { store, collapsed: true } as any
+    { store, collapsed: false } as any
   );
 
   useControls(

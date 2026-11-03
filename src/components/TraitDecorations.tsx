@@ -5,6 +5,57 @@ import { RoundedBoxGeometry } from 'three-stdlib';
 import { useGameStore } from '../store/useGameStore';
 import { visualScaleForMass } from '../lib/scale';
 import { ringTier, gemTier, twinTier } from '../lib/tiers';
+import { U } from '../systems/organism';
+import { simplexNoise3D } from '../shaders/noise';
+
+// Twin companion: a translucent cell with a breathing nucleus (1.x drew a flat white sphere)
+const twinVertex = /* glsl */ `
+uniform float uTime;
+varying vec3 vN; varying vec3 vV; varying vec3 vP;
+${simplexNoise3D}
+void main() {
+  vec3 n = normalize(normal);
+  float d = snoise(position * 1.8 + vec3(uTime * 0.15)) * 0.14 + sin(uTime * 0.7) * 0.03;
+  vec4 wp = modelMatrix * vec4(position + n * d, 1.0);
+  vN = normalize(mat3(modelMatrix) * n);
+  vV = normalize(cameraPosition - wp.xyz);
+  vP = position;
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}
+`;
+const twinFragment = /* glsl */ `
+uniform float uTime;
+uniform vec3 uGlow; uniform vec3 uAccent; uniform vec3 uDeep; uniform vec3 uVein;
+varying vec3 vN; varying vec3 vV; varying vec3 vP;
+void main() {
+  float ndv = max(dot(normalize(vN), normalize(vV)), 0.0);
+  float fres = pow(1.0 - ndv, 2.5);
+  float beat = 0.5 + 0.5 * sin(uTime * 0.6 - 1.2);   // lags the main body's breath
+  float veins = smoothstep(0.08, 0.0, abs(sin(vP.x * 6.0 + sin(vP.y * 5.0 + uTime * 0.2) * 1.5)));
+  vec3 col = uDeep * 2.0 + uAccent * pow(ndv, 4.0) * (0.35 + 0.4 * beat) + uVein * veins * 0.25 + uGlow * fres * 0.85;
+  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 0.92);
+}
+`;
+// Gems: faceted living glass, palette-coherent
+const gemVertex = /* glsl */ `
+varying vec3 vN; varying vec3 vV;
+void main() {
+  vN = normalize(mat3(modelMatrix) * normal);
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vV = normalize(cameraPosition - wp.xyz);
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}
+`;
+const gemFragment = /* glsl */ `
+uniform vec3 uTint; uniform vec3 uGlow;
+varying vec3 vN; varying vec3 vV;
+void main() {
+  float ndv = abs(dot(normalize(vN), normalize(vV)));
+  float fres = pow(1.0 - ndv, 2.0);
+  vec3 col = uTint * (0.25 + 0.35 * ndv) + mix(uGlow, vec3(1.0), 0.3) * fres;
+  gl_FragColor = vec4(col, 0.85);
+}
+`;
 
 // Build the 6 jewel shapes used for gem shards
 function buildGemGeometries() {
@@ -42,11 +93,9 @@ export default function TraitDecorations() {
     []
   );
 
+  // deterministic per index (1.x used Math.random, so gems changed colour every load)
   const gemColors = useMemo(
-    () =>
-      Array.from({ length: MAX_GEMS }, () =>
-        new THREE.Color().setHSL(0.55 + Math.random() * 0.3, 0.85, 0.7)
-      ),
+    () => Array.from({ length: MAX_GEMS }, (_, i) => new THREE.Color().setHSL(0.55 + ((i * 0.618034) % 1) * 0.3, 0.85, 0.7)),
     []
   );
 
@@ -179,12 +228,13 @@ export default function TraitDecorations() {
             visible={false}
             geometry={gemGeometries[i % gemGeometries.length]}
           >
-            <meshBasicMaterial
-              color={gemColors[i]}
+            <shaderMaterial
               transparent
-              opacity={0.92}
-              blending={THREE.AdditiveBlending}
               depthWrite={false}
+              blending={THREE.AdditiveBlending}
+              uniforms={{ uTint: { value: gemColors[i] }, uGlow: U.uColorGlow }}
+              vertexShader={gemVertex}
+              fragmentShader={gemFragment}
             />
           </mesh>
         ))}
@@ -192,8 +242,13 @@ export default function TraitDecorations() {
 
       {/* Twinned companion */}
       <mesh ref={twinRef} visible={false}>
-        <icosahedronGeometry args={[1, 3]} />
-        <meshBasicMaterial color="#cfe9ff" transparent opacity={0.85} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <icosahedronGeometry args={[1, 4]} />
+        <shaderMaterial
+          transparent
+          uniforms={{ uTime: U.uTime, uGlow: U.uColorGlow, uAccent: U.uColorAccent, uDeep: U.uColorDeep, uVein: U.uColorVein }}
+          vertexShader={twinVertex}
+          fragmentShader={twinFragment}
+        />
       </mesh>
     </group>
   );

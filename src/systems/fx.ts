@@ -62,8 +62,8 @@ const TINTS: Partial<Record<PhenomenonKind, [number, number, number]>> = {
 /** Shared phenomenon state (one at a time). */
 export const phenomena = {
   active: null as null | { kind: PhenomenonKind; start: number; dur: number; seed: number },
-  start(kind: PhenomenonKind, dur: number) {
-    this.active = { kind, start: performance.now() / 1000, dur, seed: Math.random() };
+  start(kind: PhenomenonKind, dur: number, seed: number = Math.random()) {
+    this.active = { kind, start: performance.now() / 1000, dur, seed };
   },
   /** 0..1 progress, or -1 when not running this kind */
   progress(kind: PhenomenonKind): number {

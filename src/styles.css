@@ -482,3 +482,18 @@ canvas { display: block; touch-action: none; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   .caption, .trait-toast, .stage-transition-label { animation: none !important; }
 }
+
+/* Dev: phone-sized frame to check mobile composition on desktop */
+body.debug-phone #root { width: 390px; height: 844px; margin: 20px auto; border-radius: 28px; overflow: hidden; outline: 1px solid rgba(255,255,255,0.15); position: relative; }
+body.debug-phone .ui-overlay { position: absolute; }
+
+.context-lost {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  background: rgba(2, 3, 10, 0.85); color: var(--ink-soft); font-family: var(--font);
+  letter-spacing: 0.2em; text-transform: uppercase; font-size: 12px;
+}
+.context-lost button {
+  background: none; border: 1px solid var(--hair); color: var(--ink); border-radius: 999px;
+  padding: 10px 20px; font: inherit; cursor: pointer; min-height: 44px;
+}

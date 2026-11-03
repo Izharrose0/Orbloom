@@ -290,6 +290,7 @@ export default function GrowthStructures({ geometry }: { geometry: THREE.BufferG
       },
       vertexShader: growthVertex,
       fragmentShader: growthFragment,
+      defines: { ORG_LITE: 1 },
       side: THREE.DoubleSide,
       transparent: l.isCilia,
       depthWrite: !l.isCilia,

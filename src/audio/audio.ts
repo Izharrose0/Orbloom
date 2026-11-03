@@ -9,6 +9,15 @@ let dryBus: GainNode | null = null;
 let droneStarted = false;
 let muted = false;
 
+// Adaptive soundscape profile (set by the organism controller; applied with slow ramps)
+export type AudioProfile = { transpose: number; breathHz: number; stage: number; idle: number; brightness: number };
+let profile: AudioProfile = { transpose: 0, breathHz: 0.09, stage: 0, idle: 0, brightness: 0.5 };
+let padFilter: BiquadFilterNode | null = null;
+let breathLfo: OscillatorNode | null = null;
+let breathBus: GainNode | null = null;
+let shimmerBus: GainNode | null = null;
+let subBus: GainNode | null = null;
+
 const MASTER_VOL = 0.32;
 
 function getCtx(): AudioContext | null {
@@ -82,8 +91,9 @@ export function startAmbient() {
   if (!c || !masterGain || droneStarted) return;
   droneStarted = true;
 
-  // Notes (Hz): C2, G2, Eb3, Bb3, F4
-  const notes = [65.41, 98.0, 155.56, 233.08, 349.23];
+  // Notes (Hz): C2, G2, Eb3, Bb3, F4 — transposed per genome so every organism has its own key
+  const k = Math.pow(2, profile.transpose / 12);
+  const notes = [65.41, 98.0, 155.56, 233.08, 349.23].map((f) => f * k);
   const types: OscillatorType[] = ['sine', 'sine', 'triangle', 'sine', 'triangle'];
 
   const padBus = c.createGain();
@@ -126,9 +136,97 @@ export function startAmbient() {
 
   filter.connect(padBus);
   send(padBus, 0.7, 0.85);
+  padFilter = filter;
 
   // Very long attack
   padBus.gain.linearRampToValueAtTime(0.85, c.currentTime + 8);
+
+  startLayers(c, k);
+  applyProfile();
+}
+
+// Biological breathing (filtered noise swelling at the organism's breath rate),
+// surface shimmer (from Pulsar) and internal sub resonance (from White Hole).
+function startLayers(c: AudioContext, k: number) {
+  const len = c.sampleRate * 2;
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < len; i++) { last = last * 0.97 + (Math.random() * 2 - 1) * 0.03; d[i] = last * 3; }
+  const noise = c.createBufferSource();
+  noise.buffer = buf;
+  noise.loop = true;
+  const bp = c.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = 420;
+  bp.Q.value = 0.6;
+  breathBus = c.createGain();
+  breathBus.gain.value = 0;
+  const amp = c.createGain();
+  amp.gain.value = 0.5;
+  breathLfo = c.createOscillator();
+  breathLfo.frequency.value = profile.breathHz;
+  const lfoDepth = c.createGain();
+  lfoDepth.gain.value = 0.5;
+  breathLfo.connect(lfoDepth).connect(amp.gain);
+  noise.connect(bp).connect(amp).connect(breathBus);
+  send(breathBus, 0.6, 0.6);
+  noise.start();
+  breathLfo.start();
+
+  shimmerBus = c.createGain();
+  shimmerBus.gain.value = 0;
+  [1046.5, 1568.0].forEach((f, i) => {
+    const o = c.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = f * k;
+    const g = c.createGain();
+    g.gain.value = 0.012;
+    const trem = c.createOscillator();
+    trem.frequency.value = 0.07 + i * 0.05;
+    const tg = c.createGain();
+    tg.gain.value = 0.01;
+    trem.connect(tg).connect(g.gain);
+    o.connect(g).connect(shimmerBus!);
+    o.start();
+    trem.start();
+  });
+  send(shimmerBus, 0.2, 1.0);
+
+  subBus = c.createGain();
+  subBus.gain.value = 0;
+  const sub = c.createOscillator();
+  sub.type = 'sine';
+  sub.frequency.value = 32.7 * k * 2;
+  const subG = c.createGain();
+  subG.gain.value = 0.09;
+  sub.connect(subG).connect(subBus);
+  send(subBus, 0.9, 0.2);
+  sub.start();
+}
+
+function applyProfile() {
+  if (!ctx || !droneStarted) return;
+  const t = ctx.currentTime;
+  const p = profile;
+  breathBus?.gain.setTargetAtTime(0.05 * (0.6 + p.idle * 0.6), t, 2.5);
+  breathLfo?.frequency.setTargetAtTime(p.breathHz * (1 - p.idle * 0.3), t, 3);
+  shimmerBus?.gain.setTargetAtTime(p.stage >= 2 ? 0.6 + p.brightness * 0.4 : 0, t, 4);
+  subBus?.gain.setTargetAtTime(p.stage >= 4 ? 0.7 : 0, t, 5);
+  // meditation darkens the pad; luminous organisms keep it a little brighter
+  padFilter?.frequency.setTargetAtTime(520 + p.brightness * 360 - p.idle * 200, t, 4);
+}
+
+/** Called ~1 Hz by the organism controller. Never jumps: everything ramps. */
+export function setAudioProfile(p: Partial<AudioProfile>) {
+  const prevTranspose = profile.transpose;
+  profile = { ...profile, ...p };
+  if (droneStarted && prevTranspose !== profile.transpose) {
+    // key is fixed once the pad is running (it would require rebuilding every voice);
+    // genome normally arrives before the first gesture starts audio.
+    profile.transpose = prevTranspose;
+  }
+  applyProfile();
 }
 
 // Soft tap — rounded sine pluck. `pitch` (0..1) maps where you touched the

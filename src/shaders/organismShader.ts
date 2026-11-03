@@ -67,6 +67,10 @@ float orgField(vec3 sp, vec3 n, out vec4 m1, out vec4 m2) {
 
   // ---- identity noise (genome family) ----
   float n1 = surfaceNoise(sp * 1.4 + vec3(0.0, t, 0.0), uNoiseType);
+#ifdef ORG_LITE
+  // rooted structures: only the large-scale shape matters (they sink slightly into the skin)
+  float base = n1 * 0.15 * mix(1.0, 0.15, uTraitSmooth);
+#else
   float n2 = surfaceNoise(sp * 3.2 - vec3(t * 0.7, 0.0, t * 0.4), uNoiseType);
 #ifdef ORG_COARSE
   float det = snoise(sp * 5.0 + vec3(t * 1.3));
@@ -76,6 +80,7 @@ float orgField(vec3 sp, vec3 n, out vec4 m1, out vec4 m2) {
   float base = n1 * 0.15 + n2 * 0.055 + det * (0.014 + min(uEvolution, 8.0) * 0.0025);
 #endif
   base *= mix(1.0, 0.15, uTraitSmooth);
+#endif
 
   // ---- biological animation: layered, out of phase ----
   float rate = uPulseRate * (0.85 + uPersona.x * 0.5);
@@ -127,8 +132,14 @@ float orgField(vec3 sp, vec3 n, out vec4 m1, out vec4 m2) {
   }
 
   // ---- trait mutations (kept from 1.x, now shaded as anatomy in the fragment) ----
+#ifdef ORG_LITE
+  float spikeMask = 0.0;
+  float craterMask = 0.0;
+#else
   float spikeNoise = snoise(sp * 7.0 + vec3(uMass * 0.001));
   float spikeMask = smoothstep(0.45, 0.85, spikeNoise);
+  float craterMask = smoothstep(0.55, 0.85, snoise(sp * 4.5 + uCraterSeed));
+#endif
   float spike = spikeMask * uTraitSpiked * 0.55;
 
   float ridges = pow(sin(n.y * 18.0) * 0.5 + 0.5, 2.0);
@@ -140,7 +151,6 @@ float orgField(vec3 sp, vec3 n, out vec4 m1, out vec4 m2) {
   fissure = max(fissure, exp(-pow(fd * 18.0, 2.0)) * 0.7);
   float fissureDisp = -fissure * uTraitFissured * 0.32;
 
-  float craterMask = smoothstep(0.55, 0.85, snoise(sp * 4.5 + uCraterSeed));
   float craterDisp = -craterMask * uTraitCratered * 0.18;
 
   m1 = vec4(lobe, fin, ripGlow, spikeMask * uTraitSpiked);
@@ -419,8 +429,18 @@ void main() {
     col += aur * 0.28 * uTraitAurorae * (0.4 + fres);
   }
 
+  // ---------------- hidden markings: only surface during deep stillness ----------------
+  // genome-specific concentric glyph bands around the body axis, like growth rings
+  if (uIdle > 0.02) {
+    float ringCoord = dot(dirL, uGenomeAxis) * (7.0 + uPersona.z * 6.0) + snoise(vLocal * 1.3 + uGenomeAxis * 4.0) * 1.2;
+    float marks = smoothstep(0.1, 0.0, abs(fract(ringCoord) - 0.5) - 0.38);
+    float dots = smoothstep(0.75, 0.95, snoise(vLocal * 5.0 + uGenomeAxis * 9.0));
+    float reveal = smoothstep(0.35, 1.0, uIdle) * (0.6 + 0.4 * sin(t * 0.35));
+    col += mix(uColorAccent, uColorGlow, 0.4) * (marks * 0.35 + dots * 0.25) * reveal;
+  }
+
   // ---------------- touch ----------------
-  col += mix(uColorGlow, vec3(1.0), 0.3) * ripGlow * 0.55;
+  col += mix(uColorGlow, uColorAccent, 0.3) * min(ripGlow, 1.2) * 0.35;
   col += uColorGlow * uAbsorb * 0.12;
 
   // ---------------- light transport & rim ----------------
