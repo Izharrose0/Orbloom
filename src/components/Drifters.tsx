@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three-stdlib';
 import { useGameStore } from '../store/useGameStore';
 import { sfxCollect } from '../audio/audio';
+import { absorbFx, tapGuard } from '../systems/fx';
+import { organismState } from '../systems/organism';
 
 function makeStellatedGeometry(): THREE.BufferGeometry {
   // Base icosa, then push every original vertex outward to make smoothed spikes,
@@ -26,6 +28,7 @@ function makeStellatedGeometry(): THREE.BufferGeometry {
 
 export type DriftersHandle = {
   triggerMeteorShower: () => void;
+  quasarFragments: () => void;
   spawnShape: (shape: ShapeKind) => void;
 };
 
@@ -168,6 +171,24 @@ export default forwardRef<DriftersHandle, {}>(function Drifters(_, fwdRef) {
   const meteorTimer = useRef(0);
 
   useImperativeHandle(fwdRef, () => ({
+    quasarFragments: () => {
+      // a quasar sheds a few bright fragments that drift PAST the organism — they need a touch
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const vis = organismState.visScale;
+      for (let k = 0; k < 5; k++) {
+        const slot = drifters.find((d) => !d.alive);
+        if (!slot) break;
+        spawn(slot);
+        slot.pos.set(side * (11 + k * 1.2), (Math.random() - 0.5) * 2.5, (Math.random() - 0.5) * 2);
+        const aim = new THREE.Vector3((Math.random() - 0.5) * 0.5, (Math.random() < 0.5 ? -1 : 1) * vis * (1.7 + Math.random() * 0.9), 0.8);
+        slot.vel.copy(aim).sub(slot.pos).normalize().multiplyScalar(1.0 + Math.random() * 0.3);
+        slot.size = 0.26 + Math.random() * 0.1;
+        slot.life = 22;
+        slot.shape = 'stellated';
+        slot.color.setHSL(0.52 + Math.random() * 0.06, 0.6, 0.82);
+        applyDrifterToMesh(slot, drifters.indexOf(slot));
+      }
+    },
     triggerMeteorShower: () => {
       meteorBurstRemaining.current = 14;
       meteorTimer.current = 0;
@@ -223,10 +244,9 @@ export default forwardRef<DriftersHandle, {}>(function Drifters(_, fwdRef) {
       d.life -= delta;
       d.pos.addScaledVector(d.vel, delta);
 
-      const toCenter = new THREE.Vector3().copy(d.pos).multiplyScalar(-1);
-      const r = toCenter.length();
-      toCenter.normalize().multiplyScalar(0.18 / Math.max(0.6, r * r));
-      d.vel.addScaledVector(toCenter, delta);
+      const r = d.pos.length();
+      // gentle gravity toward the organism (no per-frame allocation)
+      d.vel.addScaledVector(d.pos, (-0.18 / Math.max(0.6, r * r)) * delta / Math.max(1e-3, r));
 
       m.position.copy(d.pos);
       m.rotation.x += delta * d.spin;
@@ -238,9 +258,10 @@ export default forwardRef<DriftersHandle, {}>(function Drifters(_, fwdRef) {
         mat.uniforms.uTime.value = tRef.current + i * 0.7;
       }
 
-      if (r < 1.6) {
+      if (r < Math.max(1.6, organismState.visScale * 1.25)) {
         d.alive = false;
         useGameStore.getState().collectDrifter(6);
+        absorbFx.emit({ from: d.pos.clone(), count: 18, color: d.color });
         sfxCollect();
       }
 
@@ -265,8 +286,10 @@ export default forwardRef<DriftersHandle, {}>(function Drifters(_, fwdRef) {
     e.stopPropagation();
     const d = drifters[idx];
     if (!d.alive) return;
+    tapGuard.until = performance.now() + 450;
     d.alive = false;
     useGameStore.getState().collectDrifter(10);
+    absorbFx.emit({ from: d.pos.clone(), count: 30, color: d.color });
     sfxCollect();
   };
 

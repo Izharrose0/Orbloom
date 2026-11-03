@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { sfxStageUp } from '../audio/audio';
+import { sfxMutation } from '../audio/audio';
 
 export default function StageTransition() {
   const stage = useGameStore((s) => s.stage);
@@ -27,26 +27,27 @@ export default function StageTransition() {
       const wait = setTimeout(() => {
         lastShownId.current = stage.id;
         setFlash({ name: stage.name, key: Date.now() });
-        sfxStageUp();
+        sfxMutation();
         if ('vibrate' in navigator) navigator.vibrate?.([20, 80, 60]);
+        setTimeout(() => setFlash(null), 6000);
       }, 6200);
       return () => clearTimeout(wait);
     }
     lastShownId.current = stage.id;
     setFlash({ name: stage.name, key: Date.now() });
-    sfxStageUp();
+    sfxMutation();
     if ('vibrate' in navigator) navigator.vibrate?.([20, 80, 60]);
-    const t = setTimeout(() => setFlash(null), 3200);
+    const t = setTimeout(() => setFlash(null), 6000);
     return () => clearTimeout(t);
   }, [stage.id, stage.name, welcomeBackAmount]);
 
   if (!flash) return null;
 
   return (
-    <div className="stage-transition" key={flash.key}>
+    <div className="stage-transition" key={flash.key} role="status" aria-live="polite">
       <div className="stage-transition-flash" />
       <div className="stage-transition-label">
-        <span className="stage-transition-eyebrow">Mutation</span>
+        <span className="stage-transition-eyebrow">It is becoming</span>
         <span className="stage-transition-name">{flash.name}</span>
       </div>
     </div>

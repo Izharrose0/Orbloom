@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Genome, deriveGenome, deriveName, deriveQuadrant } from '../lib/genome';
 import { Stage, stageForMass, STAGES } from '../lib/stages';
 import { applyTrait } from '../lib/traits';
+import { QualityLevel, detectInitialQuality, prefersReducedMotion } from '../lib/quality';
 
 export type CosmicEventKind = 'meteor' | 'eclipse' | 'resonance' | 'bloom' | 'quasar' | 'twinning';
 
@@ -59,8 +60,18 @@ export type GameState = {
   recentTraitId: string | null;
   recentTraitShownAt: number;
 
+  /** Increments whenever state is loaded from a save — presentation snaps instead of animating. */
+  hydrationVersion: number;
+
   // UI
   muted: boolean;
+  lastInteractionAt: number;
+  caption: { text: string; sub?: string; at: number } | null; // contextual, self-dismissing line of text   // any camera / UI interaction (seconds, performance clock)
+
+  // Presentation (not persisted in the save row)
+  quality: QualityLevel;
+  reducedMotion: boolean;
+  legacyLook: boolean;         // dev comparison: render the pre-2.0 organism
 
   // Debug override
   noiseTypeOverride: number | null;
@@ -73,6 +84,9 @@ export type GameState = {
   absorbEnergy: (amount?: number) => void;
   collectDrifter: (value?: number) => void;
   setMuted: (m: boolean) => void;
+  touchInteraction: () => void;
+  showCaption: (text: string, sub?: string) => void;
+  setQuality: (q: QualityLevel) => void;
   startEvent: (k: CosmicEventKind, durationSec: number) => void;
   startObjective: (obj: EventObjective) => void;
   clearEvent: () => void;
@@ -89,7 +103,7 @@ export type GameState = {
 
 const PLACEHOLDER_GENOME: Genome = {
   hueDeep: 220, hueGlow: 195, hueVein: 285, pulseRate: 1.0, veinDensity: 1.0,
-  noiseType: 0, baseForm: 0, veinNoiseType: 0,
+  noiseType: 0, baseForm: 0, veinNoiseType: 0, seed: 1, hueAccent: 40,
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -124,7 +138,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   recentTraitId: null,
   recentTraitShownAt: 0,
 
+  hydrationVersion: 0,
   muted: false,
+  lastInteractionAt: 0,
+  caption: null,
+  quality: typeof window !== 'undefined' ? detectInitialQuality() : 1,
+  reducedMotion: typeof window !== 'undefined' ? prefersReducedMotion() : false,
+  legacyLook: typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('legacy'),
   noiseTypeOverride: null,
   baseFormOverride: null,
 
@@ -153,6 +173,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       traits: data.traits ?? [],
       traitAmounts: data.traitAmounts ?? {},
       customName: data.customName ?? null,
+      hydrationVersion: get().hydrationVersion + 1,
     });
   },
 
@@ -219,6 +240,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setMuted: (m) => set({ muted: m }),
+  touchInteraction: () => set({ lastInteractionAt: performance.now() / 1000 }),
+  showCaption: (text, sub) => set({ caption: { text, sub, at: performance.now() / 1000 } }),
+  setQuality: (q) => set({ quality: q }),
 
   startEvent: (k, durationSec) => {
     set({ activeEvent: k, activeEventUntil: performance.now() / 1000 + durationSec });

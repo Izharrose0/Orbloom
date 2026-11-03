@@ -1,4 +1,5 @@
 import { PREFIX, SUFFIX } from './names';
+import { hashString } from './rng';
 
 export type Genome = {
   hueDeep: number;
@@ -9,6 +10,9 @@ export type Genome = {
   noiseType: number;       // surface noise (0..5)
   baseForm: number;        // base geometry (0..5)
   veinNoiseType: number;   // internal vein pattern noise (0..5) — independent from surface
+  // 2.0 additions — derived (never persisted), so old saves stay compatible.
+  seed: number;            // 32-bit seed for all deterministic morphology / growth placement
+  hueAccent: number;       // bioluminescent accent hue (tips, spores, growths)
 };
 
 export const NOISE_TYPE_NAMES = ['Simplex', 'Ridged', 'Voronoi', 'Worley', 'Warped', 'Turbulence'];
@@ -51,5 +55,8 @@ export function deriveGenome(uuid: string): Genome {
   const noiseType = b[8] % 6;
   const baseForm = b[9] % 6;
   const veinNoiseType = b[12] % 6;
-  return { hueDeep, hueGlow, hueVein, pulseRate, veinDensity, noiseType, baseForm, veinNoiseType };
+  const seed = hashString(uuid);
+  // Accent sits roughly opposite the vein hue, nudged by byte 13 so it isn't a pure complement.
+  const hueAccent = (hueVein + 150 + ((b[13] ?? 0) % 60)) % 360;
+  return { hueDeep, hueGlow, hueVein, pulseRate, veinDensity, noiseType, baseForm, veinNoiseType, seed, hueAccent };
 }

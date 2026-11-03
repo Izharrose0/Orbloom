@@ -28,7 +28,7 @@ export default function App() {
           stencil: false,
           depth: true,
         }}
-        camera={{ position: [0, 0.4, 5.2], fov: 45, near: 0.1, far: 100 }}
+        camera={{ position: [0, 0.4, 5.2], fov: 45, near: 0.1, far: 900 }}
       >
         <color attach="background" args={['#02030a']} />
         <fog attach="fog" args={['#02030a', 6, 26]} />

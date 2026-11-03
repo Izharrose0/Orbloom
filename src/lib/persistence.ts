@@ -83,10 +83,14 @@ export async function loadPlanet(): Promise<void> {
   const id = getUserId();
   useGameStore.getState().init(id);
 
-  // Hydrate immediately from local cache if available (no flicker, instant feel)
+  // Hydrate immediately from local cache if available (no flicker, instant feel).
+  // Offline catch-up applies here too: the local snapshot carries its own
+  // updated_at, and it is usually as fresh as the server row (both are written
+  // together), so skipping it meant same-device players never grew while away.
+  // hydrate() sets mass absolutely, so a later remote hydrate can't double-count.
   const localRow = readLocal(id);
   if (localRow) {
-    hydrate(localRow, { offlineCatchup: false });
+    hydrate(localRow, { offlineCatchup: true });
   }
 
   if (!supabaseEnabled || !supabase) return;

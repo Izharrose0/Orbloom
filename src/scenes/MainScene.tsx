@@ -11,14 +11,20 @@ import Drifters, { DriftersHandle } from '../components/Drifters';
 import StageDecorations from '../components/StageDecorations';
 import TraitDecorations from '../components/TraitDecorations';
 import MultiCoreOrbs from '../components/MultiCoreOrbs';
+import Symbionts from '../components/Symbionts';
 import Constellation from '../components/Constellation';
 import CosmicEventsSystem from '../systems/cosmicEvents';
 import EventObjectivesSystem from '../systems/eventObjectives';
 import { useGameStore } from '../store/useGameStore';
 import { DEBUG_ENABLED } from '../dev/debug';
+import { OrganismController } from '../systems/organism';
+import { sceneHooks } from '../systems/fx';
+import EventPhenomena from '../systems/phenomena';
+import PassiveBehaviors from '../systems/passiveBehaviors';
 
-const BLOOM_MIN = 0.6;
-const BLOOM_MAX = 1.9;
+// Bloom is a halo, not a fog: high threshold so only veins, tips and rims glow.
+const BLOOM_MIN = 0.45;
+const BLOOM_MAX = 1.25;
 
 function DynamicBloom() {
   const bloomRef = useRef<any>(null);
@@ -26,27 +32,33 @@ function DynamicBloom() {
   useFrame((_, delta) => {
     const { stage, pulseIntensity, activeEvent } = useGameStore.getState();
     if (!bloomRef.current) return;
-    const stageBoost = Math.min(0.6, stage.bloomBoost * 0.5);
-    const pulse = Math.min(0.55, pulseIntensity * 0.35);
-    const eventBoost = activeEvent === 'resonance' ? 0.25 : activeEvent === 'eclipse' ? -0.35 : 0;
-    const target = Math.max(BLOOM_MIN, Math.min(BLOOM_MAX, 0.85 + stageBoost + pulse + eventBoost));
+    const stageBoost = Math.min(0.3, stage.bloomBoost * 0.25);
+    const pulse = Math.min(0.3, pulseIntensity * 0.2);
+    const eventBoost = activeEvent === 'resonance' || activeEvent === 'quasar' ? 0.2 : activeEvent === 'eclipse' ? -0.25 : 0;
+    const target = Math.max(BLOOM_MIN, Math.min(BLOOM_MAX, 0.7 + stageBoost + pulse + eventBoost));
     currentRef.current += (target - currentRef.current) * Math.min(1, delta * 2.5);
     bloomRef.current.intensity = currentRef.current;
   });
   return (
     <Bloom
       ref={bloomRef}
-      intensity={0.9}
-      luminanceThreshold={0.28}
-      luminanceSmoothing={0.7}
+      intensity={0.75}
+      luminanceThreshold={0.55}
+      luminanceSmoothing={0.35}
       mipmapBlur
-      radius={0.78}
+      radius={0.7}
     />
   );
 }
 
 export default function MainScene() {
   const driftersRef = useRef<DriftersHandle>(null);
+
+  useEffect(() => {
+    sceneHooks.meteorShower = () => driftersRef.current?.triggerMeteorShower();
+    sceneHooks.quasarFragments = () => driftersRef.current?.quasarFragments();
+    return () => { sceneHooks.meteorShower = undefined; sceneHooks.quasarFragments = undefined; };
+  }, []);
 
   useEffect(() => {
     if (!DEBUG_ENABLED) return;
@@ -64,12 +76,14 @@ export default function MainScene() {
 
   return (
     <>
+      <OrganismController />
       <CameraRig />
       <Sky />
       <Constellation />
       <EnvironmentFX />
       <LivingSphere />
       <MultiCoreOrbs />
+      <Symbionts />
       <StageDecorations />
       <TraitDecorations />
       <Drifters ref={driftersRef} />
@@ -77,6 +91,8 @@ export default function MainScene() {
 
       <CosmicEventsSystem onMeteorBurst={() => driftersRef.current?.triggerMeteorShower()} />
       <EventObjectivesSystem />
+      <PassiveBehaviors />
+      <EventPhenomena />
 
       <EffectComposer multisampling={0}>
         <DynamicBloom />

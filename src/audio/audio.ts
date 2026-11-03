@@ -131,31 +131,43 @@ export function startAmbient() {
   padBus.gain.linearRampToValueAtTime(0.85, c.currentTime + 8);
 }
 
-// Soft tap — rounded sine pluck, low volume, plenty of reverb
-export function sfxTap() {
+// Soft tap — rounded sine pluck. `pitch` (0..1) maps where you touched the
+// organism onto a pentatonic scale (low on the underside, high on top), so
+// exploring the body plays a melody. `intensity` drops with rapid tapping.
+const TAP_SCALE = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25, 783.99, 880.0];
+export function sfxTap(pitch = Math.random(), intensity = 1) {
   const c = getCtx();
   if (!c) return;
   const now = c.currentTime;
   const o = c.createOscillator();
   o.type = 'sine';
-  // pentatonic notes for a "musical" tap experience
-  const notes = [523.25, 587.33, 659.25, 783.99, 880.0]; // C5 D5 E5 G5 A5
-  o.frequency.value = notes[Math.floor(Math.random() * notes.length)];
+  const idx = Math.max(0, Math.min(TAP_SCALE.length - 1, Math.round(pitch * (TAP_SCALE.length - 1))));
+  o.frequency.value = TAP_SCALE[idx];
+  // soft second partial a fifth above, quieter — a little more "bell", less "beep"
+  const o2 = c.createOscillator();
+  o2.type = 'sine';
+  o2.frequency.value = TAP_SCALE[idx] * 1.5;
 
+  const peak = 0.05 + 0.045 * Math.max(0, Math.min(1, intensity));
   const g = c.createGain();
   g.gain.setValueAtTime(0.0001, now);
-  g.gain.exponentialRampToValueAtTime(0.09, now + 0.02);
+  g.gain.exponentialRampToValueAtTime(peak, now + 0.02);
   g.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
+  const g2 = c.createGain();
+  g2.gain.value = 0.18;
 
-  // Low-pass to take edge off
   const lp = c.createBiquadFilter();
   lp.type = 'lowpass';
   lp.frequency.value = 2400;
 
-  o.connect(lp).connect(g);
+  o.connect(lp);
+  o2.connect(g2).connect(lp);
+  lp.connect(g);
   send(g, 0.55, 0.95);
   o.start(now);
+  o2.start(now);
   o.stop(now + 1.5);
+  o2.stop(now + 1.5);
 }
 
 // Collect — soft bell, two-voice, generous reverb
@@ -223,5 +235,71 @@ export function sfxResonance() {
     send(g, 0.3, 1.0);
     o.start(start);
     o.stop(start + 4.6);
+  });
+}
+
+// Synchronisation — a slow, low heartbeat chord swelling under the pad
+export function sfxSync() {
+  const c = getCtx();
+  if (!c) return;
+  const now = c.currentTime;
+  [98.0, 146.83, 196.0].forEach((f, i) => {
+    const o = c.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = f;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    // four soft heartbeats
+    for (let k = 0; k < 4; k++) {
+      const t0 = now + k * 2.2 + i * 0.02;
+      g.gain.exponentialRampToValueAtTime(0.06 / (i + 1), t0 + 0.25);
+      g.gain.exponentialRampToValueAtTime(0.004, t0 + 1.6);
+    }
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 9.5);
+    o.connect(g);
+    send(g, 0.5, 0.9);
+    o.start(now);
+    o.stop(now + 9.8);
+  });
+}
+
+// Spore release — a tiny airy glint, very quiet
+export function sfxSpore() {
+  const c = getCtx();
+  if (!c) return;
+  const now = c.currentTime;
+  const o = c.createOscillator();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(1318.5, now);
+  o.frequency.exponentialRampToValueAtTime(1760, now + 1.2);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.018, now + 0.3);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+  o.connect(g);
+  send(g, 0.2, 1.0);
+  o.start(now);
+  o.stop(now + 2.3);
+}
+
+// Morphological mutation — a slow rising swell (used for stage/epoch growth)
+export function sfxMutation() {
+  const c = getCtx();
+  if (!c) return;
+  const now = c.currentTime;
+  [130.81, 196.0, 261.63, 329.63, 392.0].forEach((f, i) => {
+    const o = c.createOscillator();
+    o.type = i % 2 ? 'triangle' : 'sine';
+    o.frequency.setValueAtTime(f * 0.985, now);
+    o.frequency.linearRampToValueAtTime(f, now + 3);
+    const g = c.createGain();
+    const start = now + i * 0.35;
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(0.06, start + 1.6);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + 6.0);
+    o.connect(g);
+    send(g, 0.3, 1.0);
+    o.start(start);
+    o.stop(start + 6.2);
   });
 }

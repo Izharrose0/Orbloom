@@ -2,17 +2,19 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGameStore, EventObjective, CosmicEventKind } from '../store/useGameStore';
 import { rollTraitFromEvent } from '../lib/traits';
-import { sfxStageUp, sfxCollect } from '../audio/audio';
+import { sfxCollect } from '../audio/audio';
 
 type Spec = { description: string; target: number; durationSec: number; massReward: number };
 
 const SPECS: Record<CosmicEventKind, Spec> = {
   meteor:    { description: 'Collect 5 meteors',          target: 5,  durationSec: 12, massReward: 5  },
   eclipse:   { description: "Don't tap for 6 seconds",    target: 6,  durationSec: 8,  massReward: 3  },
-  resonance: { description: 'Tap rhythmically 6 times',   target: 6,  durationSec: 8,  massReward: 4  },
-  bloom:     { description: 'Reach +20 energy in 10s',    target: 20, durationSec: 10, massReward: 6  },
-  quasar:    { description: 'Collect 3 drifters',         target: 3,  durationSec: 10, massReward: 8  },
-  twinning:  { description: 'Hold still and witness',     target: 1,  durationSec: 5,  massReward: 10 },
+  resonance: { description: 'Answer with 5 touches',      target: 5,  durationSec: 10, massReward: 4  },
+  // 1.x asked for +20 energy in 10 s (≈25 rapid taps) — rebalanced to reward a few calm touches or one drifter
+  bloom:     { description: 'Feed the bloom',             target: 8,  durationSec: 14, massReward: 6  },
+  // 1.x relied on random spawns (every 5–12 s) for 3 catches in 10 s; the quasar now sheds its own fragments
+  quasar:    { description: 'Catch 3 quasar fragments',   target: 3,  durationSec: 14, massReward: 8  },
+  twinning:  { description: 'Hold still and witness',     target: 1,  durationSec: 6,  massReward: 10 },
 };
 
 export function buildObjective(kind: CosmicEventKind): EventObjective {
@@ -108,8 +110,7 @@ function resolveObjective(kind: CosmicEventKind, success: boolean) {
     useGameStore.setState((s) => ({
       mass: s.mass + spec.massReward,
     }));
-    store.completeObjective();
-    sfxStageUp();
+    store.completeObjective(); // TraitToast plays the mutation swell
   } else {
     // Failure: tiny consolation + no trait
     useGameStore.setState((s) => ({ mass: s.mass + 1 }));
